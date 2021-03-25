@@ -1,9 +1,17 @@
 <script lang="ts">
-  import { screenToWorld, worldToScreen, Vector } from "./helpers.js";
-  import { canvasOffset, canvasScale } from "./stores.js";
-  import Selection from "./Core/Selection.svelte";
+  import {
+    screenToWorld,
+    worldToScreen,
+    Vector,
+    overlappingRect,
+  } from "../scripts/helpers.ts";
+  import { canvasOffset, canvasScale } from "../stores.js";
+  import Selection from "./Selection.svelte";
 
   const ZOOM_SENSITIVITY = 0.1;
+  let SelectionElement = document.getElementsByClassName("selection");
+  let Selectables = document.getElementsByClassName("selectable");
+  let Selected = document.getElementsByClassName("selected");
 
   $: translateX = $canvasOffset.x;
   $: translateY = $canvasOffset.y;
@@ -29,7 +37,13 @@
         break;
     }
   }
-  function mouseUp(e: MouseEvent) {}
+  function mouseUp(e: MouseEvent) {
+    switch (e.button) {
+      case 0:
+        selectOffset = { x: 0, y: 0 };
+        break;
+    }
+  }
   function mouseMove(e: MouseEvent) {
     switch (e.buttons) {
       case 1:
@@ -37,6 +51,18 @@
           screenToWorld(e.clientX, e.clientY),
           selectStart
         );
+        for (let i = 0; i < Selectables.length; i++) {
+          if (
+            overlappingRect(
+              Selectables.item(i).getBoundingClientRect(),
+              SelectionElement.item(0).getBoundingClientRect()
+            )
+          ) {
+            Selectables.item(i).classList.add("selected");
+          } else {
+            Selectables.item(i).classList.remove("selected");
+          }
+        }
         break;
       case 4:
         let x = initialOffset.x + (e.clientX - initialPanPosition.x);
@@ -57,6 +83,7 @@
     $canvasOffset = Vector.addEach($canvasOffset, zoomPositionDifference);
     console.log(zoomPositionDifference);
   }
+  function handler() {}
 </script>
 
 <div
@@ -66,8 +93,6 @@
   on:mousemove={mouseMove}
   on:mousewheel={mouseWheel}
   on:contextmenu|preventDefault
-  on:select|preventDefault
-  on:drag|preventDefault
 >
   <div id="background" />
 
@@ -81,9 +106,10 @@
       scaleX={selectOffset.x}
       scaleY={selectOffset.y}
     />
-    <p>yo this is a test</p>
-    <p>yo this is a test</p>
+    <p class="selectable">yo this is a test</p>
+    <p class="selectable">yo this is a test</p>
     <img
+      class="selectable"
       src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png"
       alt="test"
     />
@@ -115,6 +141,7 @@
       var(--translateX),
       var(--translateY)
     );
+    pointer-events: none;
   }
   p {
     position: relative;

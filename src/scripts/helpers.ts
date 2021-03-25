@@ -1,4 +1,4 @@
-import { canvasOffset, canvasScale } from "./stores";
+import { canvasOffset, canvasScale } from "../stores";
 
 function getCanvasValues(): { offset: { x: number, y: number }, scale: number } {
     let canvasOffsetValue = { x: 0, y: 0 };
@@ -45,4 +45,17 @@ class Vector {
     }
 }
 
-export { screenToWorld, worldToScreen, Vector };
+function overlappingRect(rect1: DOMRect, rect2:DOMRect): boolean {
+    let overlap = false;
+    if (rect1 && rect2) {
+        overlap = !(
+            rect1.right < rect2.left ||
+            rect1.left > rect2.right ||
+            rect1.bottom < rect2.top ||
+            rect1.top > rect2.bottom
+        );
+    }
+    return overlap;
+}
+
+export { screenToWorld, worldToScreen, Vector, overlappingRect };

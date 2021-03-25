@@ -11,3 +11,7 @@ body {
 body {
   font-family: "Nunito", sans-serif;
 }
+
+.selected {
+  box-shadow: 0px 0px 30px rgba(5, 22, 255, 0.5);
+}

@@ -8,13 +8,14 @@
 <div>
   <div
     id="selection"
+    class="selection"
     style="--translateX: {translateX}; --translateY: {translateY}; --scaleX: {scaleX}; --scaleY: {scaleY};"
   />
 </div>
 
 <style>
   #selection {
-    background-color: blue;
+    background-color: lightskyblue;
     position: absolute;
     width: 1px;
     height: 1px;
@@ -27,5 +28,6 @@
       var(--translateX),
       var(--translateY)
     );
+    pointer-events: none;
   }
 </style>
