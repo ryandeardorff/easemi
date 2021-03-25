@@ -15,7 +15,7 @@
 
 <style>
   #selection {
-    background-color: lightblue;
+    background-color: lightskyblue;
     position: absolute;
     width: 1px;
     height: 1px;

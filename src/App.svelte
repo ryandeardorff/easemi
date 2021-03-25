@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Canvas from "./Canvas.svelte";
+  import Canvas from "./core/Canvas.svelte";
   import { canvasOffset, canvasScale } from "./stores.js";
 </script>
 

@@ -1,4 +1,4 @@
-import { canvasOffset, canvasScale } from "./stores";
+import { canvasOffset, canvasScale } from "../stores";
 
 function getCanvasValues(): { offset: { x: number, y: number }, scale: number } {
     let canvasOffsetValue = { x: 0, y: 0 };

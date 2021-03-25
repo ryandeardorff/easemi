@@ -4,9 +4,9 @@
     worldToScreen,
     Vector,
     overlappingRect,
-  } from "./helpers.js";
-  import { canvasOffset, canvasScale } from "./stores.js";
-  import Selection from "./Core/Selection.svelte";
+  } from "../scripts/helpers.ts";
+  import { canvasOffset, canvasScale } from "../stores.js";
+  import Selection from "./Selection.svelte";
 
   const ZOOM_SENSITIVITY = 0.1;
   let SelectionElement = document.getElementsByClassName("selection");
