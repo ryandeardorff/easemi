@@ -11,6 +11,7 @@
   const ZOOM_SENSITIVITY = 0.1;
   let SelectionElement = document.getElementsByClassName("selection");
   let Selectables = document.getElementsByClassName("selectable");
+  let Selected = document.getElementsByClassName("selected");
 
   $: translateX = $canvasOffset.x;
   $: translateY = $canvasOffset.y;
@@ -40,7 +41,6 @@
     switch (e.button) {
       case 0:
         selectOffset = { x: 0, y: 0 };
-
         break;
     }
   }
