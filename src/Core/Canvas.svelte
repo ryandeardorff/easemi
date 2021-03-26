@@ -1,113 +1,108 @@
 <script lang="ts">
-  import {
-    screenToWorld,
-    worldToScreen,
-    Vector,
-    overlappingRect,
-  } from "../scripts/helpers.ts";
-  import { canvasOffset, canvasScale } from "../stores.js";
-  import Selection from "./Selection.svelte";
+  import { spring } from "svelte/motion";
+  import { screenToWorld } from "../scripts/helpers";
+  import {  canvasOffset, canvasScale } from "../stores.js";
+  const PAN_STIFFNESS = 1;
+  const PAN_DAMPING = 1;
+  const ZOOM_STIFFNESS = 1;
+  const ZOOM_DAMPING = 1;
+  const MOUSE_PAN_BUTTON = 4;
+  const KEY_PAN_AMMOUNT = 100;
+  const KEY_PAN_LEFT = "ArrowLeft";
+  const KEY_PAN_RIGHT = "ArrowRight";
+  const KEY_PAN_UP = "ArrowUp";
+  const KEY_PAN_DOWN = "ArrowDown";
+  
+  const SCROLL_ZOOM_MULTIPLIER = 2;
 
-  const ZOOM_SENSITIVITY = 0.1;
-  let SelectionElement = document.getElementsByClassName("selection");
-  let Selectables = document.getElementsByClassName("selectable");
-  let Selected = document.getElementsByClassName("selected");
-
-  $: translateX = $canvasOffset.x;
-  $: translateY = $canvasOffset.y;
-  $: scaleX = $canvasScale;
-  $: scaleY = $canvasScale;
-
-  let initialOffset = { x: 0, y: 0 };
-  let initialPanPosition = { x: 0, y: 0 };
-
-  let selectStart = { x: 0, y: 0 };
-  let selectOffset = { x: 0, y: 0 };
-
-  function mouseDown(e: MouseEvent) {
-    switch (e.button) {
-      case 0:
-        selectStart = screenToWorld(e.clientX, e.clientY);
+  document.onkeydown = function (event) {
+    let char = (typeof event !== 'undefined') ? event.key : event.which
+    switch (char){
+      case KEY_PAN_LEFT:
+        pan(-KEY_PAN_AMMOUNT, 0)
         break;
-      case 1:
-        initialPanPosition = { x: e.clientX, y: e.clientY };
-        initialOffset = $canvasOffset;
+      case KEY_PAN_RIGHT:
+        pan(KEY_PAN_AMMOUNT, 0)
         break;
-      case 2:
+      case KEY_PAN_UP:
+        pan(0, -KEY_PAN_AMMOUNT)
+        break;
+      case KEY_PAN_DOWN:
+        pan(0, KEY_PAN_AMMOUNT)
         break;
     }
   }
-  function mouseUp(e: MouseEvent) {
-    switch (e.button) {
-      case 0:
-        selectOffset = { x: 0, y: 0 };
+
+  const canvasCoords = spring(
+    { x: 0, y: 0 },
+    {
+      stiffness: PAN_STIFFNESS,
+      damping: PAN_DAMPING,
+    }
+  );
+  const canvasZoom = spring(
+    {s: 1},
+    {
+      stiffness: ZOOM_STIFFNESS,
+      damping: ZOOM_DAMPING,
+    })
+  
+
+  function pan(dx: number, dy:number) {
+    console.log(dx, dy, $canvasZoom.s, $canvasScale)
+    canvasCoords.update(($canvasCoords) => ({
+      x: $canvasCoords.x + (dx),
+      y: $canvasCoords.y + (dy),
+    }));
+    $canvasOffset = {x: $canvasCoords.x, y: $canvasCoords.y};
+  }
+  function zoom(ds: number) {
+    canvasZoom.update(($canvasZoom) => ({
+      s: $canvasZoom.s + (ds * $canvasZoom.s * 0.1)
+    }))
+    $canvasScale = $canvasZoom.s;
+  }
+
+  function canvasMouseDown(e: MouseEvent) {
+  }
+  function canvasMouseMove(e: MouseEvent) {
+    switch(e.buttons){
+      case MOUSE_PAN_BUTTON:
+        pan(e.movementX, e.movementY);
         break;
     }
   }
-  function mouseMove(e: MouseEvent) {
-    switch (e.buttons) {
-      case 1:
-        selectOffset = Vector.subtractEach(
-          screenToWorld(e.clientX, e.clientY),
-          selectStart
-        );
-        for (let i = 0; i < Selectables.length; i++) {
-          if (
-            overlappingRect(
-              Selectables.item(i).getBoundingClientRect(),
-              SelectionElement.item(0).getBoundingClientRect()
-            )
-          ) {
-            Selectables.item(i).classList.add("selected");
-          } else {
-            Selectables.item(i).classList.remove("selected");
-          }
-        }
-        break;
-      case 4:
-        let x = initialOffset.x + (e.clientX - initialPanPosition.x);
-        let y = initialOffset.y + (e.clientY - initialPanPosition.y);
-        $canvasOffset = { x: x, y: y };
-        break;
-    }
-  }
-  function mouseWheel(e: WheelEvent) {
-    let scrollDirection = -e.deltaY / 100;
-    let initialZoomPosition = screenToWorld(e.clientX, e.clientY);
-    $canvasScale += scrollDirection * ZOOM_SENSITIVITY * $canvasScale;
-    let afterZoomPosition = screenToWorld(e.clientX, e.clientY);
-    let zoomPositionDifference = Vector.multiplyBoth(
-      Vector.subtractEach(afterZoomPosition, initialZoomPosition),
-      $canvasScale
+  function canvasMouseWheel(e: WheelEvent){
+    let scrollDirection = e.deltaY;
+    let worldPositionBefore = screenToWorld(e.clientX, e.clientY);
+    zoom((scrollDirection/-100)*SCROLL_ZOOM_MULTIPLIER);
+    let worldPositionAfter = screenToWorld(e.clientX, e.clientY);
+    canvasCoords.stiffness = ZOOM_STIFFNESS
+    canvasCoords.damping = ZOOM_DAMPING
+    pan(
+      (worldPositionAfter.x - worldPositionBefore.x)*$canvasZoom.s, 
+      (worldPositionAfter.y - worldPositionBefore.y)*$canvasZoom.s
     );
-    $canvasOffset = Vector.addEach($canvasOffset, zoomPositionDifference);
-    console.log(zoomPositionDifference);
+    console.log(worldPositionAfter)
+    
   }
-  function handler() {}
 </script>
 
 <div
   id="canvas"
-  on:mousedown={mouseDown}
-  on:mouseup={mouseUp}
-  on:mousemove={mouseMove}
-  on:mousewheel={mouseWheel}
-  on:contextmenu|preventDefault
+  on:mousedown={canvasMouseDown}
+  on:mousemove={canvasMouseMove}
+  on:mousewheel={canvasMouseWheel}
 >
   <div id="background" />
 
   <div
     id="contents"
-    style="--translateX: {translateX}; --translateY: {translateY}; --scaleX: {scaleX}; --scaleY: {scaleY};"
+    style="transform:
+		translate({$canvasCoords.x}px,{$canvasCoords.y}px)scale({$canvasZoom.s},{$canvasZoom.s})"
   >
-    <Selection
-      translateX={selectStart.x}
-      translateY={selectStart.y}
-      scaleX={selectOffset.x}
-      scaleY={selectOffset.y}
-    />
-    <p class="selectable">yo this is a test</p>
-    <p class="selectable">yo this is a test</p>
+    <p>yo this is a test</p>
+    <p>yo this is a test</p>
     <img
       class="selectable"
       src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png"
@@ -129,18 +124,8 @@
   }
   #contents {
     position: absolute;
-    width: fit-content;
-    height: fit-content;
     transform-origin: top left;
     /* transform: translateX(var(--translateX)); */
-    transform: matrix(
-      var(--scaleX),
-      0,
-      0,
-      var(--scaleY),
-      var(--translateX),
-      var(--translateY)
-    );
     pointer-events: none;
   }
   p {

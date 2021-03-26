@@ -3,7 +3,7 @@
   import { canvasOffset, canvasScale } from "./stores.js";
 </script>
 
-<main>
+<main on:contextmenu|preventDefault>
   <!-- <input type="number" bind:value={$canvasOffset.x} />
   <input type="number" bind:value={$canvasOffset.y} />
   <input type="number" bind:value={$canvasScale} />
