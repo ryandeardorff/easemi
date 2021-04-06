@@ -2,9 +2,9 @@
   import { spring } from "svelte/motion";
   import { screenToWorld } from "../scripts/helpers";
   import {  canvasOffset, canvasScale } from "../stores.js";
-  const PAN_STIFFNESS = 1;
+  const PAN_STIFFNESS = .1;
   const PAN_DAMPING = 1;
-  const ZOOM_STIFFNESS = 1;
+  const ZOOM_STIFFNESS = .2;
   const ZOOM_DAMPING = 1;
   const MOUSE_PAN_BUTTON = 4;
   const KEY_PAN_AMMOUNT = 100;
@@ -12,7 +12,8 @@
   const KEY_PAN_RIGHT = "ArrowRight";
   const KEY_PAN_UP = "ArrowUp";
   const KEY_PAN_DOWN = "ArrowDown";
-  
+
+  //TODO: add comments for clarity. 
   const SCROLL_ZOOM_MULTIPLIER = 2;
 
   document.onkeydown = function (event) {
@@ -33,11 +34,13 @@
     }
   }
 
+  //TODO: Fix the stiffness and damping for position and zoom.
   const canvasCoords = spring(
     { x: 0, y: 0 },
     {
       stiffness: PAN_STIFFNESS,
       damping: PAN_DAMPING,
+      precision: .0000000001
     }
   );
   const canvasZoom = spring(
@@ -45,9 +48,9 @@
     {
       stiffness: ZOOM_STIFFNESS,
       damping: ZOOM_DAMPING,
+      precision: .0000000001
     })
-  
-
+    
   function pan(dx: number, dy:number) {
     console.log(dx, dy, $canvasZoom.s, $canvasScale)
     canvasCoords.update(($canvasCoords) => ({
@@ -55,6 +58,17 @@
       y: $canvasCoords.y + (dy),
     }));
     $canvasOffset = {x: $canvasCoords.x, y: $canvasCoords.y};
+  }
+  function panTest(dx: number, dy:number) {
+    console.log(dx, dy, $canvasZoom.s, $canvasScale)
+    canvasCoords.stiffness = ZOOM_STIFFNESS;
+    const promise = canvasCoords.set({
+      x: $canvasOffset.x + (dx),
+      y: $canvasOffset.y + (dy),
+    }, {soft: 0});
+    promise.then(()=>{
+      canvasCoords.stiffness = PAN_STIFFNESS
+    });
   }
   function zoom(ds: number) {
     canvasZoom.update(($canvasZoom) => ({
@@ -77,9 +91,8 @@
     let worldPositionBefore = screenToWorld(e.clientX, e.clientY);
     zoom((scrollDirection/-100)*SCROLL_ZOOM_MULTIPLIER);
     let worldPositionAfter = screenToWorld(e.clientX, e.clientY);
-    canvasCoords.stiffness = ZOOM_STIFFNESS
-    canvasCoords.damping = ZOOM_DAMPING
-    pan(
+  
+    panTest(
       (worldPositionAfter.x - worldPositionBefore.x)*$canvasZoom.s, 
       (worldPositionAfter.y - worldPositionBefore.y)*$canvasZoom.s
     );
