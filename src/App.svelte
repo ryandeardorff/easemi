@@ -1,6 +1,5 @@
 <script lang="ts">
   import Canvas from "./core/Canvas.svelte";
-  import { canvasOffset, canvasScale } from "./stores.js";
 </script>
 
 <main on:contextmenu|preventDefault>

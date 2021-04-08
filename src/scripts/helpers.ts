@@ -1,21 +1,36 @@
-import { canvasOffset, canvasScale } from "../stores";
+import { canvasTargetTranslation, canvasTargetScale } from "../stores";
 
 function getCanvasValues(): { offset: { x: number; y: number }; scale: number } {
-  let canvasOffsetValue = { x: 0, y: 0 };
-  let canvasScaleValue = 1;
-  const unsubscribeOffset = canvasOffset.subscribe((value) => {
-    canvasOffsetValue = value;
+  let canvasTargetTranslationValue = { x: 0, y: 0 };
+  let canvasTargetScaleValue = 1;
+  const unsubscribeOffset = canvasTargetTranslation.subscribe((value) => {
+    canvasTargetTranslationValue = value;
   });
   unsubscribeOffset();
-  const unsubscribeScale = canvasScale.subscribe((value) => {
-    canvasScaleValue = value;
+  const unsubscribeScale = canvasTargetScale.subscribe((value) => {
+    canvasTargetScaleValue = value;
   });
   unsubscribeScale();
-  return { offset: canvasOffsetValue, scale: canvasScaleValue };
+  return { offset: canvasTargetTranslationValue, scale: canvasTargetScaleValue };
 }
 
-function screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
+function screenToWorld(
+  screenX: number,
+  screenY: number,
+  customX: number = null,
+  customY: number = null,
+  customScale: number = null
+): { x: number; y: number } {
   let canvas = getCanvasValues();
+  if (customX != null) {
+    canvas.offset.x = customX;
+  }
+  if (customY != null) {
+    canvas.offset.y = customY;
+  }
+  if (customScale != null) {
+    canvas.scale = customScale;
+  }
   return {
     x: (screenX - canvas.offset.x) / canvas.scale,
     y: (screenY - canvas.offset.y) / canvas.scale,

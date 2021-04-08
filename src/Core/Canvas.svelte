@@ -1,10 +1,10 @@
 <script lang="ts">
   import { spring } from "svelte/motion";
   import { screenToWorld, Vector } from "../scripts/helpers";
-  import {  canvasOffset, canvasScale } from "../stores.js";
-  const PAN_STIFFNESS = .4;
+  import {  canvasTargetTranslation, canvasTargetScale } from "../stores.js";
+  const PAN_STIFFNESS = 1;
   const PAN_DAMPING = 1;
-  const ZOOM_STIFFNESS = .1;
+  const ZOOM_STIFFNESS = .2;
   const ZOOM_DAMPING = 1;
   const MOUSE_PAN_BUTTON = 4;
   const KEY_PAN_AMMOUNT = 100;
@@ -34,10 +34,13 @@
     }
   }
 
-  $: console.log(Vector.subtractEach($canvasCoords,$canvasOffset));
+  //Send to the Store the combined spring target values for world space calculations.
+  $: $canvasTargetTranslation = Vector.addEach(panTarget, {x: zoomTarget.x, y: zoomTarget.y})
+  $: $canvasTargetScale = zoomTarget.s
 
-  //TODO: Fix the stiffness and damping for position and zoom.
-  const canvasCoords = spring(
+  //Define the target and spring for panning
+  let panTarget = {x: 0, y: 0}
+  const panSpring = spring(
     { x: 0, y: 0 },
     {
       stiffness: PAN_STIFFNESS,
@@ -45,31 +48,35 @@
       precision: .0000000001
     }
   );
-  const canvasZoom = spring(
-    {s: 100},
+
+  //Define the target and spring for zooming (including offset in the target)
+  let zoomTarget = {x: 0, y: 0, s: 1}
+  const zoomSpring = spring(
+    { x:0, y:0, s: 1},
     {
       stiffness: ZOOM_STIFFNESS,
       damping: ZOOM_DAMPING,
       precision: .0000000001
     })
-    
+
+  //Define the combined spring coordinates to be used by the canvas component's transform property
+  let canvasTranslation = {x: 0, y: 0}
+  $: canvasTranslation = {x: $panSpring.x + $zoomSpring.x, y: $panSpring.y + $zoomSpring.y}
+  $: canvasZoom = $zoomSpring.s;
+  
   function pan(dx: number, dy:number) {
-    canvasCoords.stiffness = PAN_STIFFNESS;
-    $canvasOffset = {x: ($canvasOffset.x + dx), y: $canvasOffset.y + dy};
-    canvasCoords.update(($canvasCoords) => ($canvasOffset));
+    panTarget.x = panTarget.x + dx
+    panTarget.y = panTarget.y + dy
+    panSpring.update(($panSpring) => (panTarget));
   }
-  function panTest(dx: number, dy:number) {
-    canvasCoords.stiffness = ZOOM_STIFFNESS;
-    $canvasOffset = {x: $canvasOffset.x + dx, y: $canvasOffset.y + dy}
-    const promise = canvasCoords.update(($canvasCoords) => ($canvasOffset));
-    promise.then(()=>{
-      canvasCoords.stiffness = PAN_STIFFNESS
-      console.log("promise solved")
-    });
+  function offsetZoom(dx: number, dy:number) {
+    zoomTarget.x = zoomTarget.x + dx
+    zoomTarget.y = zoomTarget.y + dy
+    zoomSpring.update(($zoomSpring) => (zoomTarget))
   }
   function zoom(ds: number) {
-    $canvasScale = $canvasScale + (ds * $canvasScale * 0.1);
-    canvasZoom.update(($canvasZoom) => ({s: $canvasScale}));
+    zoomTarget.s = zoomTarget.s + (ds * zoomTarget.s * 0.1)
+    zoomSpring.update(($zoomSpring) => (zoomTarget));
   }
 
   function canvasMouseDown(e: MouseEvent) {
@@ -85,13 +92,12 @@
     let scrollDirection = e.deltaY;
     let worldPositionBefore = screenToWorld(e.clientX, e.clientY);
     zoom((scrollDirection/-100)*SCROLL_ZOOM_MULTIPLIER);
-    let worldPositionAfter = screenToWorld(e.clientX, e.clientY);
+    let worldPositionAfter = screenToWorld(e.clientX, e.clientY, null, null, zoomTarget.s);
   
-    panTest(
-      (worldPositionAfter.x - worldPositionBefore.x)*$canvasScale, 
-      (worldPositionAfter.y - worldPositionBefore.y)*$canvasScale
+    offsetZoom(
+      (worldPositionAfter.x - worldPositionBefore.x)*zoomTarget.s, 
+      (worldPositionAfter.y - worldPositionBefore.y)*zoomTarget.s
     )
-    console.log($canvasScale, $canvasZoom)
   }
   
 </script>
@@ -107,7 +113,7 @@
   <div
     id="contents"
     style="transform:
-		translate({$canvasCoords.x}px,{$canvasCoords.y}px)scale({$canvasZoom.s},{$canvasZoom.s})"
+		translate({canvasTranslation.x}px,{canvasTranslation.y}px)scale({canvasZoom},{canvasZoom})"
   >
     <p>yo this is a test</p>
     <p>yo this is a test</p>
