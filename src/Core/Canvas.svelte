@@ -1,10 +1,10 @@
 <script lang="ts">
   import { spring } from "svelte/motion";
-  import { screenToWorld } from "../scripts/helpers";
+  import { screenToWorld, Vector } from "../scripts/helpers";
   import {  canvasOffset, canvasScale } from "../stores.js";
-  const PAN_STIFFNESS = .1;
+  const PAN_STIFFNESS = .4;
   const PAN_DAMPING = 1;
-  const ZOOM_STIFFNESS = .2;
+  const ZOOM_STIFFNESS = .1;
   const ZOOM_DAMPING = 1;
   const MOUSE_PAN_BUTTON = 4;
   const KEY_PAN_AMMOUNT = 100;
@@ -34,6 +34,8 @@
     }
   }
 
+  $: console.log(Vector.subtractEach($canvasCoords,$canvasOffset));
+
   //TODO: Fix the stiffness and damping for position and zoom.
   const canvasCoords = spring(
     { x: 0, y: 0 },
@@ -44,7 +46,7 @@
     }
   );
   const canvasZoom = spring(
-    {s: 1},
+    {s: 100},
     {
       stiffness: ZOOM_STIFFNESS,
       damping: ZOOM_DAMPING,
@@ -52,29 +54,22 @@
     })
     
   function pan(dx: number, dy:number) {
-    console.log(dx, dy, $canvasZoom.s, $canvasScale)
-    canvasCoords.update(($canvasCoords) => ({
-      x: $canvasCoords.x + (dx),
-      y: $canvasCoords.y + (dy),
-    }));
-    $canvasOffset = {x: $canvasCoords.x, y: $canvasCoords.y};
+    canvasCoords.stiffness = PAN_STIFFNESS;
+    $canvasOffset = {x: ($canvasOffset.x + dx), y: $canvasOffset.y + dy};
+    canvasCoords.update(($canvasCoords) => ($canvasOffset));
   }
   function panTest(dx: number, dy:number) {
-    console.log(dx, dy, $canvasZoom.s, $canvasScale)
     canvasCoords.stiffness = ZOOM_STIFFNESS;
-    const promise = canvasCoords.set({
-      x: $canvasOffset.x + (dx),
-      y: $canvasOffset.y + (dy),
-    }, {soft: 0});
+    $canvasOffset = {x: $canvasOffset.x + dx, y: $canvasOffset.y + dy}
+    const promise = canvasCoords.update(($canvasCoords) => ($canvasOffset));
     promise.then(()=>{
       canvasCoords.stiffness = PAN_STIFFNESS
+      console.log("promise solved")
     });
   }
   function zoom(ds: number) {
-    canvasZoom.update(($canvasZoom) => ({
-      s: $canvasZoom.s + (ds * $canvasZoom.s * 0.1)
-    }))
-    $canvasScale = $canvasZoom.s;
+    $canvasScale = $canvasScale + (ds * $canvasScale * 0.1);
+    canvasZoom.update(($canvasZoom) => ({s: $canvasScale}));
   }
 
   function canvasMouseDown(e: MouseEvent) {
@@ -93,12 +88,12 @@
     let worldPositionAfter = screenToWorld(e.clientX, e.clientY);
   
     panTest(
-      (worldPositionAfter.x - worldPositionBefore.x)*$canvasZoom.s, 
-      (worldPositionAfter.y - worldPositionBefore.y)*$canvasZoom.s
-    );
-    console.log(worldPositionAfter)
-    
+      (worldPositionAfter.x - worldPositionBefore.x)*$canvasScale, 
+      (worldPositionAfter.y - worldPositionBefore.y)*$canvasScale
+    )
+    console.log($canvasScale, $canvasZoom)
   }
+  
 </script>
 
 <div
