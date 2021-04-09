@@ -79,7 +79,30 @@ function overlappingRect(rect1: DOMRect, rect2: DOMRect): boolean {
   return overlap;
 }
 
-export { screenToWorld, worldToScreen, Vector, overlappingRect };
+function squareNormalization(
+  corner1: { x: number; y: number },
+  corner2: { x: number; y: number }
+): { x: number; y: number; width: number; height: number } {
+  let position = { x: 0, y: 0 };
+  let scale = { x: 0, y: 0 };
+  if (corner1.x > corner2.x) {
+    position.x = corner2.x;
+    scale.x = corner1.x - corner2.x;
+  } else {
+    position.x = corner1.x;
+    scale.x = corner2.x - corner1.x;
+  }
+  if (corner1.y > corner2.y) {
+    position.y = corner2.y;
+    scale.y = corner1.y - corner2.y;
+  } else {
+    position.y = corner1.y;
+    scale.y = corner2.y - corner1.y;
+  }
+  return { x: position.x, y: position.y, width: scale.x, height: scale.y };
+}
+
+export { screenToWorld, worldToScreen, Vector, overlappingRect, squareNormalization };
 
 var test = 100;
 

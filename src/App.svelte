@@ -2,7 +2,7 @@
   import Canvas from "./core/Canvas.svelte";
 </script>
 
-<main on:contextmenu|preventDefault>
+<main on:contextmenu|preventDefault on:drag|preventDefault on:dragstart|preventDefault on:dragenter|preventDefault>
   <!-- <input type="number" bind:value={$canvasOffset.x} />
   <input type="number" bind:value={$canvasOffset.y} />
   <input type="number" bind:value={$canvasScale} />

@@ -1,33 +1,24 @@
 <script>
   export let translateX = 0;
   export let translateY = 0;
-  export let scaleX = 1;
-  export let scaleY = 1;
+  export let scaleX = 1.0;
+  export let scaleY = 1.0;
 </script>
 
-<div>
-  <div
-    id="selection"
-    class="selection"
-    style="--translateX: {translateX}; --translateY: {translateY}; --scaleX: {scaleX}; --scaleY: {scaleY};"
-  />
-</div>
+<svg id="selection" width="{scaleX}" height="{scaleY}" style="transform:translate({translateX}px, {translateY}px)">
+    <rect id="selection-box" x="3" y="3" width="{scaleX-6}" height="{scaleY-6}" rx="0"/>
+ </svg>
 
 <style>
   #selection {
-    background-color: lightskyblue;
     position: absolute;
-    width: 1px;
-    height: 1px;
+    left: 0;
+    top: 0;
     transform-origin: top left;
-    transform: matrix(
-      var(--scaleX),
-      0,
-      0,
-      var(--scaleY),
-      var(--translateX),
-      var(--translateY)
-    );
-    pointer-events: none;
+  }
+  #selection-box{
+    fill: rgba(0, 183, 255, 0.295);
+    stroke-width: 3;
+    stroke: rgb(21, 189, 255);
   }
 </style>

@@ -1,12 +1,14 @@
 <script lang="ts">
   import { spring } from "svelte/motion";
-  import { screenToWorld, Vector } from "../scripts/helpers";
-  import {  canvasTargetTranslation, canvasTargetScale } from "../stores.js";
+  import { screenToWorld, Vector, squareNormalization } from "../scripts/helpers";
+  import {  canvasTargetTranslation, canvasTargetScale, canvasCurrentScale } from "../stores.js";
+  import Selection from "./Selection.svelte"
   const PAN_STIFFNESS = 1;
   const PAN_DAMPING = 1;
   const ZOOM_STIFFNESS = .2;
   const ZOOM_DAMPING = 1;
   const MOUSE_PAN_BUTTON = 4;
+  const MOUSE_SELECT_BUTTON = 1;
   const KEY_PAN_AMMOUNT = 100;
   const KEY_PAN_LEFT = "ArrowLeft";
   const KEY_PAN_RIGHT = "ArrowRight";
@@ -44,7 +46,7 @@
     {
       stiffness: PAN_STIFFNESS,
       damping: PAN_DAMPING,
-      precision: .0000000001
+      precision: .0000000000001
     }
   );
 
@@ -55,13 +57,14 @@
     {
       stiffness: ZOOM_STIFFNESS,
       damping: ZOOM_DAMPING,
-      precision: .0000000001
+      precision: .000000000001
     })
 
   //Define the combined spring coordinates to be used by the canvas component's transform property
   let canvasTranslation = {x: 0, y: 0}
   $: canvasTranslation = {x: $panSpring.x + $zoomSpring.x, y: $panSpring.y + $zoomSpring.y}
   $: canvasZoom = $zoomSpring.s;
+  $: $canvasCurrentScale = canvasZoom;
   
   function pan(dx: number, dy:number) {
     panTarget.x = panTarget.x + dx
@@ -78,14 +81,36 @@
     zoomSpring.update(($zoomSpring) => (zoomTarget));
   }
 
+  //TODO: move selection visuals outside of world space, 
+  //also look into how to avoid snapping at high zoom levels for future features
+  let selectionStart = {x: 0, y: 0}
+  let selectionScale = {x: 1000, y: 1000}
+  let selectionPosition = {x: 0, y: 0}
+  function startSelection(x:number, y:number){
+    selectionStart = screenToWorld(x, y)
+  }
+  function dragSelection(cx:number, cy:number){
+    let currentToWorld = screenToWorld(cx, cy)
+    let square = squareNormalization(selectionStart, currentToWorld)
+    selectionScale = {x: square.width, y: square.height};
+    selectionPosition = {x: square.x, y: square.y};
+  }
+
   /*    Input Handling    */
   function canvasMouseDown(e: MouseEvent) {
+    switch(e.buttons) {
+      case 1:
+        startSelection(e.clientX, e.clientY)
+        break;
+    }
   }
   function canvasMouseMove(e: MouseEvent) {
     switch(e.buttons){
       case MOUSE_PAN_BUTTON:
         pan(e.movementX, e.movementY);
         break;
+      case MOUSE_SELECT_BUTTON:
+        dragSelection(e.clientX, e.clientY)
     }
   }
   function canvasMouseWheel(e: WheelEvent){
@@ -99,7 +124,6 @@
       (worldPositionAfter.y - worldPositionBefore.y)*zoomTarget.s
     )
   }
-  
 </script>
 
 <div
@@ -110,6 +134,7 @@
 >
   <div id="background" />
 
+  
   <div
     id="contents"
     style="transform:
@@ -117,9 +142,15 @@
   >
     <p>yo this is a test</p>
     <p>yo this is a test</p>
-    <img
+    <Selection translateX={selectionPosition.x} translateY={selectionPosition.y} scaleX={selectionScale.x} scaleY={selectionScale.y}/>
+    <!--<img
       class="selectable"
       src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png"
+      alt="test"
+    /> -->
+    <img
+      class="selectable"
+      src="https://media.discordapp.net/attachments/746592405834170400/829981789388800000/image0.jpg"
       alt="test"
     />
   </div>
