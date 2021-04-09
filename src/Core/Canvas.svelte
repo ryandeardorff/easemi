@@ -81,8 +81,9 @@
     zoomSpring.update(($zoomSpring) => (zoomTarget));
   }
 
-  //TODO: move selection visuals outside of world space, 
-  //also look into how to avoid snapping at high zoom levels for future features
+  //TODO: look into moving selection visuals outside of world space, 
+  //also look into how to avoid snapping at high zoom levels for future features,
+  //as well as for the world space related calculations of this selection feature.
   let selectionStart = {x: 0, y: 0}
   let selectionScale = {x: 1000, y: 1000}
   let selectionPosition = {x: 0, y: 0}
