@@ -13,7 +13,6 @@
   const KEY_PAN_UP = "ArrowUp";
   const KEY_PAN_DOWN = "ArrowDown";
 
-  //TODO: add comments for clarity. 
   const SCROLL_ZOOM_MULTIPLIER = 2;
 
   document.onkeydown = function (event) {
@@ -79,6 +78,7 @@
     zoomSpring.update(($zoomSpring) => (zoomTarget));
   }
 
+  /*    Input Handling    */
   function canvasMouseDown(e: MouseEvent) {
   }
   function canvasMouseMove(e: MouseEvent) {
