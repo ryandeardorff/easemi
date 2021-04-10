@@ -10,7 +10,7 @@
   import Selection from "./Selection.svelte";
   const PAN_STIFFNESS = 1;
   const PAN_DAMPING = 1;
-  const ZOOM_STIFFNESS = 1;
+  const ZOOM_STIFFNESS = 0.2;
   const ZOOM_DAMPING = 1;
   const MOUSE_PAN_BUTTON = 4;
   const MOUSE_SELECT_BUTTON = 1;
@@ -193,12 +193,5 @@
   }
   img {
     position: relative;
-  }
-  .slider {
-    position: block;
-    width: 100px;
-    height: 100px;
-    align-self: center;
-    pointer-events: auto;
   }
 </style>
