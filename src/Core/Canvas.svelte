@@ -97,14 +97,26 @@
   let selectionStart = { x: 0, y: 0 };
   let selectionScale = { x: 1000, y: 1000 };
   let selectionPosition = { x: 0, y: 0 };
+  let selecting = false;
+  let selectionVisibility = "hidden";
   function startSelection(x: number, y: number) {
+    selecting = true;
     selectionStart = screenToWorld(x, y);
+    selectionScale = { x: 0, y: 0 };
+    selectionPosition = { x: 0, y: 0 };
+    selectionVisibility = "visible";
   }
   function dragSelection(cx: number, cy: number) {
-    let currentToWorld = screenToWorld(cx, cy);
-    let square = squareNormalization(selectionStart, currentToWorld);
-    selectionScale = { x: square.width, y: square.height };
-    selectionPosition = { x: square.x, y: square.y };
+    if (selecting) {
+      let currentToWorld = screenToWorld(cx, cy);
+      let square = squareNormalization(selectionStart, currentToWorld);
+      selectionScale = { x: square.width, y: square.height };
+      selectionPosition = { x: square.x, y: square.y };
+    }
+  }
+  function endSelection() {
+    selecting = false;
+    selectionVisibility = "hidden";
   }
 
   let selectionScaleScreen = { x: 0, y: 0 };
@@ -119,12 +131,9 @@
   $: console.log(selectionPositionScreen, selectionScaleScreen);
 
   /*    Input Handling    */
-  function canvasMouseDown(e: MouseEvent) {
-    switch (e.buttons) {
-      case 1:
-        startSelection(e.clientX, e.clientY);
-        break;
-    }
+  function canvasMouseDown(e: MouseEvent) {}
+  function canvasMouseUp(e: MouseEvent) {
+    endSelection();
   }
   function canvasMouseMove(e: MouseEvent) {
     switch (e.buttons) {
@@ -134,6 +143,8 @@
       case MOUSE_SELECT_BUTTON:
         dragSelection(e.clientX, e.clientY);
         break;
+      default:
+        endSelection();
     }
   }
   function canvasMouseWheel(e: WheelEvent) {
@@ -147,16 +158,34 @@
       (worldPositionAfter.y - worldPositionBefore.y) * zoomTarget.s
     );
   }
+  function canvasMouseLeave(e: MouseEvent) {
+    //endSelection();
+  }
+  function backgroundMouseDown(e: MouseEvent) {
+    switch (e.buttons) {
+      case 1:
+        startSelection(e.clientX, e.clientY);
+        break;
+    }
+  }
 </script>
 
-<div id="canvas" on:mousedown={canvasMouseDown} on:mousemove={canvasMouseMove} on:mousewheel={canvasMouseWheel}>
-  <div id="background" />
+<div
+  id="canvas"
+  on:mousedown={canvasMouseDown}
+  on:mouseup={canvasMouseUp}
+  on:mousemove={canvasMouseMove}
+  on:mousewheel={canvasMouseWheel}
+  on:pointerleave={canvasMouseLeave}
+>
+  <div id="background" on:mousedown={backgroundMouseDown} />
 
   <Selection
     translateX={selectionPositionScreen.x}
     translateY={selectionPositionScreen.y}
     scaleX={selectionScaleScreen.x}
     scaleY={selectionScaleScreen.y}
+    visibility={selectionVisibility}
   />
 
   <div
@@ -178,13 +207,16 @@
   #background {
     width: 100%;
     height: 100%;
+    background-color: lightgray;
     position: fixed;
   }
   #contents {
     position: absolute;
     transform-origin: top left;
     /* transform: translateX(var(--translateX)); */
-    pointer-events: none;
+    /*pointer-events: none;*/
+    user-select: none;
+    background-color: white;
   }
   p {
     position: relative;
