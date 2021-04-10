@@ -1,16 +1,11 @@
+import { get } from "svelte/store";
 import { canvasTargetTranslation, canvasTargetScale } from "../stores";
 
 function getCanvasValues(): { offset: { x: number; y: number }; scale: number } {
   let canvasTargetTranslationValue = { x: 0, y: 0 };
   let canvasTargetScaleValue = 1;
-  const unsubscribeOffset = canvasTargetTranslation.subscribe((value) => {
-    canvasTargetTranslationValue = value;
-  });
-  unsubscribeOffset();
-  const unsubscribeScale = canvasTargetScale.subscribe((value) => {
-    canvasTargetScaleValue = value;
-  });
-  unsubscribeScale();
+  canvasTargetTranslationValue = get(canvasTargetTranslation);
+  canvasTargetScaleValue = get(canvasTargetScale);
   return { offset: canvasTargetTranslationValue, scale: canvasTargetScaleValue };
 }
 
