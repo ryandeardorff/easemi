@@ -36,11 +36,26 @@ function screenToWorld(
     y: (screenY - canvas.offset.y) / canvas.scale,
   };
 }
-function worldToScreen(screenX: number, screenY: number): { x: number; y: number } {
+function worldToScreen(
+  screenX: number,
+  screenY: number,
+  customX: number = null,
+  customY: number = null,
+  customScale: number = null
+): { x: number; y: number } {
   let canvas = getCanvasValues();
+  if (customX != null) {
+    canvas.offset.x = customX;
+  }
+  if (customY != null) {
+    canvas.offset.y = customY;
+  }
+  if (customScale != null) {
+    canvas.scale = customScale;
+  }
   return {
-    x: (screenX + canvas.offset.x) * canvas.scale,
-    y: (screenY + canvas.offset.y) * canvas.scale,
+    x: screenX * canvas.scale + canvas.offset.x,
+    y: screenY * canvas.scale + canvas.offset.y,
   };
 }
 
@@ -84,7 +99,7 @@ function squareNormalization(
   corner2: { x: number; y: number }
 ): { x: number; y: number; width: number; height: number } {
   let position = { x: 0, y: 0 };
-  let scale = { x: 0, y: 0 };
+  let scale = { x: 0.0, y: 0.0 };
   if (corner1.x > corner2.x) {
     position.x = corner2.x;
     scale.x = corner1.x - corner2.x;
