@@ -38,7 +38,8 @@ function worldToScreen(
   customY: number = null,
   customScale: number = null
 ): { x: number; y: number } {
-  let canvas = getCanvasValues();
+  let canvas: { offset: { x: number; y: number }; scale: number };
+  canvas = { offset: { x: 0, y: 0 }, scale: 1 };
   if (customX != null) {
     canvas.offset.x = customX;
   }

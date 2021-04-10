@@ -10,7 +10,7 @@
   import Selection from "./Selection.svelte";
   const PAN_STIFFNESS = 1;
   const PAN_DAMPING = 1;
-  const ZOOM_STIFFNESS = 0.2;
+  const ZOOM_STIFFNESS = 1;
   const ZOOM_DAMPING = 1;
   const MOUSE_PAN_BUTTON = 4;
   const MOUSE_SELECT_BUTTON = 1;
@@ -54,7 +54,7 @@
     {
       stiffness: PAN_STIFFNESS,
       damping: PAN_DAMPING,
-      precision: 0.0000000000001,
+      precision: 0.0000001,
     }
   );
 
@@ -65,16 +65,13 @@
     {
       stiffness: ZOOM_STIFFNESS,
       damping: ZOOM_DAMPING,
-      precision: 0.000000000001,
+      precision: 0.0000001,
     }
   );
 
   //Define the combined spring coordinates to be used by the canvas component's transform property
   let canvasTranslation = { x: 0, y: 0 };
-  $: canvasTranslation = {
-    x: $panSpring.x + $zoomSpring.x,
-    y: $panSpring.y + $zoomSpring.y,
-  };
+  $: canvasTranslation = { x: $panSpring.x + $zoomSpring.x, y: $panSpring.y + $zoomSpring.y };
   $: canvasZoom = $zoomSpring.s;
   $: $canvasCurrentScale = canvasZoom;
   $: $canvasCurrentTranslation = canvasTranslation;
@@ -136,6 +133,7 @@
         break;
       case MOUSE_SELECT_BUTTON:
         dragSelection(e.clientX, e.clientY);
+        break;
     }
   }
   function canvasMouseWheel(e: WheelEvent) {
@@ -149,9 +147,6 @@
       (worldPositionAfter.y - worldPositionBefore.y) * zoomTarget.s
     );
   }
-
-  let testx1 = 0;
-  $: testx2 = worldToScreen(screenToWorld(testx1, 0).x, 0).x;
 </script>
 
 <div id="canvas" on:mousedown={canvasMouseDown} on:mousemove={canvasMouseMove} on:mousewheel={canvasMouseWheel}>
