@@ -170,10 +170,6 @@
   >
     <p>yo this is a test</p>
     <p>yo this is a test</p>
-    <div>
-      <input type="range" min="1" max="10" bind:value={testx1} class="slider" />
-      <input type="range" min="1" max="10" bind:value={testx2} class="slider" />
-    </div>
     <img class="selectable" src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png" alt="test" />
   </div>
 </div>
