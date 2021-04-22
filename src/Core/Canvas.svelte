@@ -198,6 +198,7 @@
   >
     <p>yo this is a test</p>
     <p>yo this is a test</p>
+    <img class="selectable" src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png" alt="test" />
   </div>
 </div>
 
