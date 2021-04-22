@@ -22,6 +22,10 @@
 
   const SCROLL_ZOOM_MULTIPLIER = 2;
 
+  let WINDOW_PIXEL_RESOLUTION = 1;
+
+  WINDOW_PIXEL_RESOLUTION = window.devicePixelRatio;
+
   document.onkeydown = function (event) {
     let char = typeof event !== "undefined" ? event.key : event.which;
     switch (char) {
@@ -77,8 +81,8 @@
   $: $canvasCurrentTranslation = canvasTranslation;
 
   function pan(dx: number, dy: number) {
-    panTarget.x = panTarget.x + dx;
-    panTarget.y = panTarget.y + dy;
+    panTarget.x = panTarget.x + dx / WINDOW_PIXEL_RESOLUTION;
+    panTarget.y = panTarget.y + dy / WINDOW_PIXEL_RESOLUTION;
     panSpring.update(($panSpring) => panTarget);
   }
   function offsetZoom(dx: number, dy: number) {
@@ -194,7 +198,6 @@
   >
     <p>yo this is a test</p>
     <p>yo this is a test</p>
-    <img class="selectable" src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png" alt="test" />
   </div>
 </div>
 
