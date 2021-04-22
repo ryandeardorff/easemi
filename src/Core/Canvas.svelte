@@ -19,6 +19,7 @@
   const KEY_PAN_RIGHT = "ArrowRight";
   const KEY_PAN_UP = "ArrowUp";
   const KEY_PAN_DOWN = "ArrowDown";
+  const KEY_MOUSE_PAN = "Alt";
 
   const SCROLL_ZOOM_MULTIPLIER = 2;
 
@@ -149,6 +150,9 @@
         break;
       default:
         endSelection();
+    }
+    if (e.getModifierState(KEY_MOUSE_PAN)) {
+      pan(e.movementX, e.movementY);
     }
   }
   function canvasMouseWheel(e: WheelEvent) {
