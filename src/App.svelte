@@ -1,9 +1,8 @@
 <script lang="ts">
   import Canvas from "./core/Canvas.svelte";
-  import { canvasOffset, canvasScale } from "./stores.js";
 </script>
 
-<main>
+<main on:contextmenu|preventDefault on:drag|preventDefault on:dragstart|preventDefault on:dragenter|preventDefault>
   <!-- <input type="number" bind:value={$canvasOffset.x} />
   <input type="number" bind:value={$canvasOffset.y} />
   <input type="number" bind:value={$canvasScale} />

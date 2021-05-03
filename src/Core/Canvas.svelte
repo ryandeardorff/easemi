@@ -1,118 +1,286 @@
 <script lang="ts">
+  import { spring } from "svelte/motion";
+  import { screenToWorld, Vector, squareNormalization, worldToScreen, overlappingRect } from "../scripts/helpers";
   import {
-    screenToWorld,
-    worldToScreen,
-    Vector,
-    overlappingRect,
-  } from "../scripts/helpers.ts";
-  import { canvasOffset, canvasScale } from "../stores.js";
+    canvasTargetTranslation,
+    canvasTargetScale,
+    canvasCurrentScale,
+    canvasCurrentTranslation,
+    canvasItems,
+  } from "../stores.js";
   import Selection from "./Selection.svelte";
+  import CanvasItem from "./CanvasItem.svelte";
+  const PAN_STIFFNESS = 1;
+  const PAN_DAMPING = 1;
+  const ZOOM_STIFFNESS = 0.2;
+  const ZOOM_DAMPING = 1;
+  const MOUSE_PAN_BUTTON = 4;
+  const MOUSE_SELECT_BUTTON = 1;
+  const KEY_PAN_AMMOUNT = 100;
+  const KEY_PAN_LEFT = "ArrowLeft";
+  const KEY_PAN_RIGHT = "ArrowRight";
+  const KEY_PAN_UP = "ArrowUp";
+  const KEY_PAN_DOWN = "ArrowDown";
+  const KEY_MOUSE_PAN = "Alt";
 
-  const ZOOM_SENSITIVITY = 0.1;
-  let SelectionElement = document.getElementsByClassName("selection");
-  let Selectables = document.getElementsByClassName("selectable");
-  let Selected = document.getElementsByClassName("selected");
+  const SCROLL_ZOOM_MULTIPLIER = 2;
 
-  $: translateX = $canvasOffset.x;
-  $: translateY = $canvasOffset.y;
-  $: scaleX = $canvasScale;
-  $: scaleY = $canvasScale;
+  let WINDOW_PIXEL_RESOLUTION = 1;
 
-  let initialOffset = { x: 0, y: 0 };
-  let initialPanPosition = { x: 0, y: 0 };
+  WINDOW_PIXEL_RESOLUTION = window.devicePixelRatio;
 
-  let selectStart = { x: 0, y: 0 };
-  let selectOffset = { x: 0, y: 0 };
-
-  function mouseDown(e: MouseEvent) {
-    switch (e.button) {
-      case 0:
-        selectStart = screenToWorld(e.clientX, e.clientY);
+  document.onkeydown = function (event) {
+    let char = typeof event !== "undefined" ? event.key : event.which;
+    switch (char) {
+      case KEY_PAN_LEFT:
+        pan(-KEY_PAN_AMMOUNT, 0);
         break;
-      case 1:
-        initialPanPosition = { x: e.clientX, y: e.clientY };
-        initialOffset = $canvasOffset;
+      case KEY_PAN_RIGHT:
+        pan(KEY_PAN_AMMOUNT, 0);
         break;
-      case 2:
+      case KEY_PAN_UP:
+        pan(0, -KEY_PAN_AMMOUNT);
+        break;
+      case KEY_PAN_DOWN:
+        pan(0, KEY_PAN_AMMOUNT);
         break;
     }
+  };
+
+  //Send to the Store the combined spring target values for world space calculations.
+  $: $canvasTargetTranslation = Vector.addEach(panTarget, {
+    x: zoomTarget.x,
+    y: zoomTarget.y,
+  });
+  $: $canvasTargetScale = zoomTarget.s;
+
+  //Define the target and spring for panning
+  let panTarget = { x: 0, y: 0 };
+  const panSpring = spring(
+    { x: 0, y: 0 },
+    {
+      stiffness: PAN_STIFFNESS,
+      damping: PAN_DAMPING,
+      precision: 0.0000001,
+    }
+  );
+
+  //Define the target and spring for zooming (including offset in the target)
+  let zoomTarget = { x: 0, y: 0, s: 1 };
+  const zoomSpring = spring(
+    { x: 0, y: 0, s: 1 },
+    {
+      stiffness: ZOOM_STIFFNESS,
+      damping: ZOOM_DAMPING,
+      precision: 0.0000001,
+    }
+  );
+
+  //Define the combined spring coordinates to be used by the canvas component's transform property
+  let canvasTranslation = { x: 0, y: 0 };
+  $: canvasTranslation = { x: $panSpring.x + $zoomSpring.x, y: $panSpring.y + $zoomSpring.y };
+  $: canvasZoom = $zoomSpring.s;
+  $: $canvasCurrentScale = canvasZoom;
+  $: $canvasCurrentTranslation = canvasTranslation;
+
+  function pan(dx: number, dy: number) {
+    panTarget.x = panTarget.x + dx / WINDOW_PIXEL_RESOLUTION;
+    panTarget.y = panTarget.y + dy / WINDOW_PIXEL_RESOLUTION;
+    panSpring.update(($panSpring) => panTarget);
   }
-  function mouseUp(e: MouseEvent) {
-    switch (e.button) {
-      case 0:
-        selectOffset = { x: 0, y: 0 };
-        break;
+  function offsetZoom(dx: number, dy: number) {
+    zoomTarget.x = zoomTarget.x + dx;
+    zoomTarget.y = zoomTarget.y + dy;
+    zoomSpring.update(($zoomSpring) => zoomTarget);
+  }
+  function zoom(ds: number) {
+    zoomTarget.s = zoomTarget.s + ds * zoomTarget.s * 0.1;
+    zoomSpring.update(($zoomSpring) => zoomTarget);
+  }
+
+  //TODO: look into moving selection visuals outside of world space,
+  //also look into how to avoid snapping at high zoom levels for future features,
+  //as well as for the world space related calculations of this selection feature.
+  let selectionStart = { x: 0, y: 0 };
+  let selectionScale = { x: 1000, y: 1000 };
+  let selectionPosition = { x: 0, y: 0 };
+  let selecting = false;
+  let selectionVisibility = "hidden";
+  function startSelection(x: number, y: number, additive: boolean) {
+    selecting = true;
+    selectionStart = screenToWorld(x, y);
+    selectionScale = { x: 0, y: 0 };
+    selectionPosition = { x: 0, y: 0 };
+    selectionVisibility = "hidden";
+    if (!additive) {
+      clearSelection();
     }
   }
-  function mouseMove(e: MouseEvent) {
+  function dragSelection(cx: number, cy: number, additive: boolean) {
+    let currentToWorld = screenToWorld(cx, cy);
+    let square = squareNormalization(selectionStart, currentToWorld);
+    selectionScale = { x: square.width, y: square.height };
+    selectionPosition = { x: square.x, y: square.y };
+    selectionVisibility = "visible";
+    compareSelection(additive);
+  }
+  function endSelection() {
+    selecting = false;
+    selectionVisibility = "hidden";
+  }
+
+  let selectionScaleScreen = { x: 0, y: 0 };
+  $: selectionPositionScreen = worldToScreen(
+    selectionPosition.x,
+    selectionPosition.y,
+    $canvasCurrentTranslation.x,
+    $canvasCurrentTranslation.y,
+    $canvasCurrentScale
+  );
+  $: selectionScaleScreen = Vector.multiplyBoth(selectionScale, $canvasCurrentScale);
+
+  function compareSelection(additive: boolean) {
+    for (let item of $canvasItems) {
+      if (
+        overlappingRect(
+          new DOMRect(selectionPosition.x, selectionPosition.y, selectionScale.x, selectionScale.y),
+          new DOMRect(item.position.x, item.position.y, item.scale.x, item.scale.y)
+        )
+      ) {
+        item.selected = true;
+      } else if (!additive) {
+        item.selected = false;
+      }
+    }
+    canvasItems.update((u) => u);
+  }
+
+  function clearSelection() {
+    for (let item of $canvasItems.filter((item) => item.selected == true)) {
+      item.selected = false;
+    }
+    canvasItems.update((u) => u);
+  }
+
+  let dragging = false;
+  function startDragging() {
+    dragging = true;
+  }
+  function dragItems(dx: number, dy: number) {
+    for (let item of $canvasItems.filter((item) => item.selected == true)) {
+      let transformVector = Vector.multiplyBoth({ x: dx, y: dy }, 1 / $canvasCurrentScale);
+      item.position = Vector.addEach(item.position, transformVector);
+    }
+    canvasItems.update((u) => u);
+  }
+  function stopDragging() {
+    dragging = false;
+  }
+  /*    Input Handling    */
+  function canvasMouseDown(e: MouseEvent) {}
+  function canvasMouseUp(e: MouseEvent) {
+    if (!dragging && !selecting) {
+      clearSelection();
+    }
+    endSelection();
+    stopDragging();
+  }
+  function canvasMouseMove(e: MouseEvent) {
     switch (e.buttons) {
-      case 1:
-        selectOffset = Vector.subtractEach(
-          screenToWorld(e.clientX, e.clientY),
-          selectStart
-        );
-        for (let i = 0; i < Selectables.length; i++) {
-          if (
-            overlappingRect(
-              Selectables.item(i).getBoundingClientRect(),
-              SelectionElement.item(0).getBoundingClientRect()
-            )
-          ) {
-            Selectables.item(i).classList.add("selected");
-          } else {
-            Selectables.item(i).classList.remove("selected");
-          }
+      case MOUSE_PAN_BUTTON:
+        pan(e.movementX, e.movementY);
+        break;
+      case MOUSE_SELECT_BUTTON:
+        if (selecting) {
+          dragSelection(e.clientX, e.clientY, e.shiftKey);
+        } else if (dragging) {
+          dragItems(e.movementX, e.movementY);
         }
         break;
-      case 4:
-        let x = initialOffset.x + (e.clientX - initialPanPosition.x);
-        let y = initialOffset.y + (e.clientY - initialPanPosition.y);
-        $canvasOffset = { x: x, y: y };
+      default:
+        endSelection();
+    }
+    if (e.getModifierState(KEY_MOUSE_PAN)) {
+      pan(e.movementX, e.movementY);
+    }
+  }
+  function canvasMouseWheel(e: WheelEvent) {
+    let scrollDirection = e.deltaY;
+    let worldPositionBefore = screenToWorld(e.clientX, e.clientY);
+    zoom((scrollDirection / -100) * SCROLL_ZOOM_MULTIPLIER);
+    let worldPositionAfter = screenToWorld(e.clientX, e.clientY, null, null, zoomTarget.s);
+
+    offsetZoom(
+      (worldPositionAfter.x - worldPositionBefore.x) * zoomTarget.s,
+      (worldPositionAfter.y - worldPositionBefore.y) * zoomTarget.s
+    );
+  }
+  function canvasMouseLeave(e: MouseEvent) {
+    //endSelection();
+  }
+  function backgroundMouseDown(e: MouseEvent) {
+    switch (e.buttons) {
+      case 1:
+        startSelection(e.clientX, e.clientY, e.shiftKey);
         break;
     }
   }
-  function mouseWheel(e: WheelEvent) {
-    let scrollDirection = -e.deltaY / 100;
-    let initialZoomPosition = screenToWorld(e.clientX, e.clientY);
-    $canvasScale += scrollDirection * ZOOM_SENSITIVITY * $canvasScale;
-    let afterZoomPosition = screenToWorld(e.clientX, e.clientY);
-    let zoomPositionDifference = Vector.multiplyBoth(
-      Vector.subtractEach(afterZoomPosition, initialZoomPosition),
-      $canvasScale
-    );
-    $canvasOffset = Vector.addEach($canvasOffset, zoomPositionDifference);
-    console.log(zoomPositionDifference);
+  function canvasItemMouseDown(e: MouseEvent, itemId: "") {
+    let canvasItem = $canvasItems.find((item) => item.id == itemId);
+    switch (e.buttons) {
+      case MOUSE_SELECT_BUTTON:
+        if (e.shiftKey && canvasItem.selected) {
+          canvasItem.selected = false;
+        } else {
+          canvasItem.selected = true;
+        }
+        startDragging(); //TODO: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        //AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Okay, so mouse handling needs to be completely reworked, abstract out
+        //some drag functionality, ideally with a radius and such to make it easier for people with jittery hands and such.
+        //Maybe trackpad support too if we're feeling crazy.
+        //Look at reworking key input to be able to query for whatever key is assigned for additive selection mode. Also look at
+        //cutting down on the number of queries to the store, those will likely get slow.
+        break;
+    }
+    canvasItems.update((u) => u);
   }
-  function handler() {}
 </script>
 
 <div
   id="canvas"
-  on:mousedown={mouseDown}
-  on:mouseup={mouseUp}
-  on:mousemove={mouseMove}
-  on:mousewheel={mouseWheel}
-  on:contextmenu|preventDefault
+  on:mousedown={canvasMouseDown}
+  on:mouseup={canvasMouseUp}
+  on:mousemove={canvasMouseMove}
+  on:mousewheel={canvasMouseWheel}
+  on:pointerleave={canvasMouseLeave}
 >
-  <div id="background" />
+  <div id="background" on:mousedown={backgroundMouseDown} />
+
+  <Selection
+    translateX={selectionPositionScreen.x}
+    translateY={selectionPositionScreen.y}
+    scaleX={selectionScaleScreen.x}
+    scaleY={selectionScaleScreen.y}
+    visibility={selectionVisibility}
+  />
 
   <div
     id="contents"
-    style="--translateX: {translateX}; --translateY: {translateY}; --scaleX: {scaleX}; --scaleY: {scaleY};"
+    style="transform: translate({canvasTranslation.x}px,{canvasTranslation.y}px)scale({canvasZoom},{canvasZoom})"
   >
-    <Selection
-      translateX={selectStart.x}
-      translateY={selectStart.y}
-      scaleX={selectOffset.x}
-      scaleY={selectOffset.y}
-    />
-    <p class="selectable">yo this is a test</p>
-    <p class="selectable">yo this is a test</p>
-    <img
-      class="selectable"
-      src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png"
-      alt="test"
-    />
+    {#each $canvasItems as item, index}
+      <CanvasItem
+        itemId={item.id}
+        itemIndex={index}
+        on:mousedown={(e) => canvasItemMouseDown(e, item.id)}
+        on:clearselection={clearSelection}
+      >
+        <svelte:component this={item.component} />
+      </CanvasItem>
+    {/each}
+    <!--<p>yo this is a test</p>
+    <p>yo this is a test</p>
+    <img class="selectable" src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png" alt="test" />-->
   </div>
 </div>
 
@@ -125,23 +293,16 @@
   #background {
     width: 100%;
     height: 100%;
+    background-color: lightgray;
     position: fixed;
   }
   #contents {
     position: absolute;
-    width: fit-content;
-    height: fit-content;
     transform-origin: top left;
     /* transform: translateX(var(--translateX)); */
-    transform: matrix(
-      var(--scaleX),
-      0,
-      0,
-      var(--scaleY),
-      var(--translateX),
-      var(--translateY)
-    );
-    pointer-events: none;
+    /*pointer-events: none;*/
+    user-select: none;
+    background-color: white;
   }
   p {
     position: relative;
