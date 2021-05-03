@@ -1,13 +1,15 @@
 <script lang="ts">
   import { spring } from "svelte/motion";
-  import { screenToWorld, Vector, squareNormalization, worldToScreen } from "../scripts/helpers";
+  import { screenToWorld, Vector, squareNormalization, worldToScreen, overlappingRect } from "../scripts/helpers";
   import {
     canvasTargetTranslation,
     canvasTargetScale,
     canvasCurrentScale,
     canvasCurrentTranslation,
+    canvasItems,
   } from "../stores.js";
   import Selection from "./Selection.svelte";
+  import CanvasItem from "./CanvasItem.svelte";
   const PAN_STIFFNESS = 1;
   const PAN_DAMPING = 1;
   const ZOOM_STIFFNESS = 0.2;
@@ -104,20 +106,23 @@
   let selectionPosition = { x: 0, y: 0 };
   let selecting = false;
   let selectionVisibility = "hidden";
-  function startSelection(x: number, y: number) {
+  function startSelection(x: number, y: number, additive: boolean) {
     selecting = true;
     selectionStart = screenToWorld(x, y);
     selectionScale = { x: 0, y: 0 };
     selectionPosition = { x: 0, y: 0 };
-    selectionVisibility = "visible";
-  }
-  function dragSelection(cx: number, cy: number) {
-    if (selecting) {
-      let currentToWorld = screenToWorld(cx, cy);
-      let square = squareNormalization(selectionStart, currentToWorld);
-      selectionScale = { x: square.width, y: square.height };
-      selectionPosition = { x: square.x, y: square.y };
+    selectionVisibility = "hidden";
+    if (!additive) {
+      clearSelection();
     }
+  }
+  function dragSelection(cx: number, cy: number, additive: boolean) {
+    let currentToWorld = screenToWorld(cx, cy);
+    let square = squareNormalization(selectionStart, currentToWorld);
+    selectionScale = { x: square.width, y: square.height };
+    selectionPosition = { x: square.x, y: square.y };
+    selectionVisibility = "visible";
+    compareSelection(additive);
   }
   function endSelection() {
     selecting = false;
@@ -133,12 +138,52 @@
     $canvasCurrentScale
   );
   $: selectionScaleScreen = Vector.multiplyBoth(selectionScale, $canvasCurrentScale);
-  $: console.log(selectionPositionScreen, selectionScaleScreen);
 
+  function compareSelection(additive: boolean) {
+    for (let item of $canvasItems) {
+      if (
+        overlappingRect(
+          new DOMRect(selectionPosition.x, selectionPosition.y, selectionScale.x, selectionScale.y),
+          new DOMRect(item.position.x, item.position.y, item.scale.x, item.scale.y)
+        )
+      ) {
+        item.selected = true;
+      } else if (!additive) {
+        item.selected = false;
+      }
+    }
+    canvasItems.update((u) => u);
+  }
+
+  function clearSelection() {
+    for (let item of $canvasItems.filter((item) => item.selected == true)) {
+      item.selected = false;
+    }
+    canvasItems.update((u) => u);
+  }
+
+  let dragging = false;
+  function startDragging() {
+    dragging = true;
+  }
+  function dragItems(dx: number, dy: number) {
+    for (let item of $canvasItems.filter((item) => item.selected == true)) {
+      let transformVector = Vector.multiplyBoth({ x: dx, y: dy }, 1 / $canvasCurrentScale);
+      item.position = Vector.addEach(item.position, transformVector);
+    }
+    canvasItems.update((u) => u);
+  }
+  function stopDragging() {
+    dragging = false;
+  }
   /*    Input Handling    */
   function canvasMouseDown(e: MouseEvent) {}
   function canvasMouseUp(e: MouseEvent) {
+    if (!dragging && !selecting) {
+      clearSelection();
+    }
     endSelection();
+    stopDragging();
   }
   function canvasMouseMove(e: MouseEvent) {
     switch (e.buttons) {
@@ -146,7 +191,11 @@
         pan(e.movementX, e.movementY);
         break;
       case MOUSE_SELECT_BUTTON:
-        dragSelection(e.clientX, e.clientY);
+        if (selecting) {
+          dragSelection(e.clientX, e.clientY, e.shiftKey);
+        } else if (dragging) {
+          dragItems(e.movementX, e.movementY);
+        }
         break;
       default:
         endSelection();
@@ -172,9 +221,28 @@
   function backgroundMouseDown(e: MouseEvent) {
     switch (e.buttons) {
       case 1:
-        startSelection(e.clientX, e.clientY);
+        startSelection(e.clientX, e.clientY, e.shiftKey);
         break;
     }
+  }
+  function canvasItemMouseDown(e: MouseEvent, itemId: "") {
+    let canvasItem = $canvasItems.find((item) => item.id == itemId);
+    switch (e.buttons) {
+      case MOUSE_SELECT_BUTTON:
+        if (e.shiftKey && canvasItem.selected) {
+          canvasItem.selected = false;
+        } else {
+          canvasItem.selected = true;
+        }
+        startDragging(); //TODO: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        //AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Okay, so mouse handling needs to be completely reworked, abstract out
+        //some drag functionality, ideally with a radius and such to make it easier for people with jittery hands and such.
+        //Maybe trackpad support too if we're feeling crazy.
+        //Look at reworking key input to be able to query for whatever key is assigned for additive selection mode. Also look at
+        //cutting down on the number of queries to the store, those will likely get slow.
+        break;
+    }
+    canvasItems.update((u) => u);
   }
 </script>
 
@@ -200,9 +268,19 @@
     id="contents"
     style="transform: translate({canvasTranslation.x}px,{canvasTranslation.y}px)scale({canvasZoom},{canvasZoom})"
   >
+    {#each $canvasItems as item, index}
+      <CanvasItem
+        itemId={item.id}
+        itemIndex={index}
+        on:mousedown={(e) => canvasItemMouseDown(e, item.id)}
+        on:clearselection={clearSelection}
+      >
+        <svelte:component this={item.component} />
+      </CanvasItem>
+    {/each}
+    <!--<p>yo this is a test</p>
     <p>yo this is a test</p>
-    <p>yo this is a test</p>
-    <img class="selectable" src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png" alt="test" />
+    <img class="selectable" src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png" alt="test" />-->
   </div>
 </div>
 

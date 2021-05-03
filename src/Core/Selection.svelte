@@ -1,23 +1,9 @@
 <script>
-  import { element } from "svelte/internal";
-
   export let translateX = 0.0;
   export let translateY = 0.0;
   export let scaleX = 1.0;
   export let scaleY = 1.0;
   export let visibility = "visible";
-  export let recalculateClientRect = false;
-
-  export function calculateSelection() {
-    let selectable = document.getElementsByClassName("selectable");
-    for (let i = 0; i < selectable.length; i++) {
-      let element = selectable[i];
-      if (recalculateClientRect | (element._boundingClientRectCache == null)) {
-        element.getBoundingClientRect();
-        element._boundingClientRectCache = element.getBoundingClientRect;
-      }
-    }
-  }
 </script>
 
 <svg
