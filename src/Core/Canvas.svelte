@@ -22,6 +22,39 @@
 
   WINDOW_PIXEL_RESOLUTION = window.devicePixelRatio;
 
+  /*   Keyboard Input   */
+  let activeKeys = [];
+  //Key Down
+  document.addEventListener("keydown", keyDown);
+  function keyDown(e: KeyboardEvent) {
+    e.preventDefault();
+    let processedKey = processKey(e.key);
+    if (e.repeat) {
+      return;
+    }
+    if (activeKeys.includes(processedKey)) {
+      return;
+    }
+    activeKeys.push(processedKey);
+    console.log(activeKeys);
+  }
+  //Key Up
+  document.addEventListener("keyup", keyUp);
+  function keyUp(e: KeyboardEvent) {
+    e.preventDefault();
+    let processedKey = processKey(e.key);
+    if (!activeKeys.includes(processedKey)) {
+      return;
+    }
+    activeKeys.splice(activeKeys.indexOf(processedKey), 1);
+    console.log(activeKeys);
+  }
+  //Processes key inputs to remove duplicate keys
+  function processKey(key: String) {
+    let processedKey = key;
+    processedKey = processedKey.toLowerCase();
+    return processedKey;
+  }
   //Send to the Store the combined spring target values for world space calculations.
   $: $canvasTargetTranslation = Vector.addEach(panTarget, {
     x: zoomTarget.x,
