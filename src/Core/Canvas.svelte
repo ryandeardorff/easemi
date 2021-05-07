@@ -29,24 +29,6 @@
 
   WINDOW_PIXEL_RESOLUTION = window.devicePixelRatio;
 
-  document.onkeydown = function (event) {
-    let char = typeof event !== "undefined" ? event.key : event.which;
-    switch (char) {
-      case KEY_PAN_LEFT:
-        pan(-KEY_PAN_AMMOUNT, 0);
-        break;
-      case KEY_PAN_RIGHT:
-        pan(KEY_PAN_AMMOUNT, 0);
-        break;
-      case KEY_PAN_UP:
-        pan(0, -KEY_PAN_AMMOUNT);
-        break;
-      case KEY_PAN_DOWN:
-        pan(0, KEY_PAN_AMMOUNT);
-        break;
-    }
-  };
-
   //Send to the Store the combined spring target values for world space calculations.
   $: $canvasTargetTranslation = Vector.addEach(panTarget, {
     x: zoomTarget.x,
@@ -177,34 +159,7 @@
     dragging = false;
   }
   /*    Input Handling    */
-  function canvasMouseDown(e: MouseEvent) {}
-  function canvasMouseUp(e: MouseEvent) {
-    if (!dragging && !selecting) {
-      clearSelection();
-    }
-    endSelection();
-    stopDragging();
-  }
-  function canvasMouseMove(e: MouseEvent) {
-    switch (e.buttons) {
-      case MOUSE_PAN_BUTTON:
-        pan(e.movementX, e.movementY);
-        break;
-      case MOUSE_SELECT_BUTTON:
-        if (selecting) {
-          dragSelection(e.clientX, e.clientY, e.shiftKey);
-        } else if (dragging) {
-          dragItems(e.movementX, e.movementY);
-        }
-        break;
-      default:
-        endSelection();
-    }
-    if (e.getModifierState(KEY_MOUSE_PAN)) {
-      pan(e.movementX, e.movementY);
-    }
-  }
-  function canvasMouseWheel(e: WheelEvent) {
+  /*function canvasMouseWheel(e: WheelEvent) {
     let scrollDirection = e.deltaY;
     let worldPositionBefore = screenToWorld(e.clientX, e.clientY);
     zoom((scrollDirection / -100) * SCROLL_ZOOM_MULTIPLIER);
@@ -214,47 +169,11 @@
       (worldPositionAfter.x - worldPositionBefore.x) * zoomTarget.s,
       (worldPositionAfter.y - worldPositionBefore.y) * zoomTarget.s
     );
-  }
-  function canvasMouseLeave(e: MouseEvent) {
-    //endSelection();
-  }
-  function backgroundMouseDown(e: MouseEvent) {
-    switch (e.buttons) {
-      case 1:
-        startSelection(e.clientX, e.clientY, e.shiftKey);
-        break;
-    }
-  }
-  function canvasItemMouseDown(e: MouseEvent, itemId: "") {
-    let canvasItem = $canvasItems.find((item) => item.id == itemId);
-    switch (e.buttons) {
-      case MOUSE_SELECT_BUTTON:
-        if (e.shiftKey && canvasItem.selected) {
-          canvasItem.selected = false;
-        } else {
-          canvasItem.selected = true;
-        }
-        startDragging(); //TODO: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-        //AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Okay, so mouse handling needs to be completely reworked, abstract out
-        //some drag functionality, ideally with a radius and such to make it easier for people with jittery hands and such.
-        //Maybe trackpad support too if we're feeling crazy.
-        //Look at reworking key input to be able to query for whatever key is assigned for additive selection mode. Also look at
-        //cutting down on the number of queries to the store, those will likely get slow.
-        break;
-    }
-    canvasItems.update((u) => u);
-  }
+  }*/
 </script>
 
-<div
-  id="canvas"
-  on:mousedown={canvasMouseDown}
-  on:mouseup={canvasMouseUp}
-  on:mousemove={canvasMouseMove}
-  on:mousewheel={canvasMouseWheel}
-  on:pointerleave={canvasMouseLeave}
->
-  <div id="background" on:mousedown={backgroundMouseDown} />
+<div id="canvas">
+  <div id="background" />
 
   <Selection
     translateX={selectionPositionScreen.x}
@@ -269,12 +188,7 @@
     style="transform: translate({canvasTranslation.x}px,{canvasTranslation.y}px)scale({canvasZoom},{canvasZoom})"
   >
     {#each $canvasItems as item, index}
-      <CanvasItem
-        itemId={item.id}
-        itemIndex={index}
-        on:mousedown={(e) => canvasItemMouseDown(e, item.id)}
-        on:clearselection={clearSelection}
-      >
+      <CanvasItem itemId={item.id} itemIndex={index} on:clearselection={clearSelection}>
         <svelte:component this={item.component} />
       </CanvasItem>
     {/each}
