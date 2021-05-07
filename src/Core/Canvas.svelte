@@ -24,22 +24,27 @@
 
   /*   Keyboard Input   */
   let activeKeys = [];
-  //Key Down
+  //TODO: Create a comparison for key combinations, possibly tie them to temp functions.
+  //Define a basic keybindings menu, with defaults (not fully mapped yet)
+  //create a way to tie into either keydown or keyup events specifically, whether that's cleaning up the functions themselves, or otherwise.
+
   document.addEventListener("keydown", keyDown);
   function keyDown(e: KeyboardEvent) {
-    e.preventDefault();
+    e.preventDefault(); //TODO: only prevent default on key combinations used, or when setting new keybindings
     let processedKey = processKey(e.key);
     if (e.repeat) {
       return;
     }
+    //TODO: Try splitting active key management into a separate function?
     if (activeKeys.includes(processedKey)) {
       return;
     }
     activeKeys.push(processedKey);
     console.log(activeKeys);
   }
-  //Key Up
+
   document.addEventListener("keyup", keyUp);
+  //TODO: Same as above, also look into whether keys getting stuck will be an issue.
   function keyUp(e: KeyboardEvent) {
     e.preventDefault();
     let processedKey = processKey(e.key);
@@ -49,12 +54,15 @@
     activeKeys.splice(activeKeys.indexOf(processedKey), 1);
     console.log(activeKeys);
   }
-  //Processes key inputs to remove duplicate keys
+
+  //Processes key inputs to remove duplicate keys-- Watch for errors with toLowercase, may need to only apply it to certain key ranges
   function processKey(key: String) {
     let processedKey = key;
     processedKey = processedKey.toLowerCase();
     return processedKey;
   }
+
+  /*   Canvas Transformations   */
   //Send to the Store the combined spring target values for world space calculations.
   $: $canvasTargetTranslation = Vector.addEach(panTarget, {
     x: zoomTarget.x,
@@ -91,6 +99,7 @@
   $: $canvasCurrentScale = canvasZoom;
   $: $canvasCurrentTranslation = canvasTranslation;
 
+  //Movement Functions
   function pan(dx: number, dy: number) {
     panTarget.x = panTarget.x + dx / WINDOW_PIXEL_RESOLUTION;
     panTarget.y = panTarget.y + dy / WINDOW_PIXEL_RESOLUTION;
@@ -106,9 +115,8 @@
     zoomSpring.update(($zoomSpring) => zoomTarget);
   }
 
-  //TODO: look into moving selection visuals outside of world space,
-  //also look into how to avoid snapping at high zoom levels for future features,
-  //as well as for the world space related calculations of this selection feature.
+  /*   Box Selections   */
+  //TODO: Refactor these functions as box selections rather than just "selection"s.
   let selectionStart = { x: 0, y: 0 };
   let selectionScale = { x: 1000, y: 1000 };
   let selectionPosition = { x: 0, y: 0 };
@@ -147,6 +155,7 @@
   );
   $: selectionScaleScreen = Vector.multiplyBoth(selectionScale, $canvasCurrentScale);
 
+  //Function that compares elements to the selection box.
   function compareSelection(additive: boolean) {
     for (let item of $canvasItems) {
       if (
@@ -155,6 +164,7 @@
           new DOMRect(item.position.x, item.position.y, item.scale.x, item.scale.y)
         )
       ) {
+        //TODO: split element selection into a separate function that could be called by a mouse events.
         item.selected = true;
       } else if (!additive) {
         item.selected = false;
@@ -165,11 +175,12 @@
 
   function clearSelection() {
     for (let item of $canvasItems.filter((item) => item.selected == true)) {
-      item.selected = false;
+      item.selected = false; //TODO: Split element deselection into a separate function
     }
     canvasItems.update((u) => u);
   }
 
+  /*   Item Movement   */
   let dragging = false;
   function startDragging() {
     dragging = true;
@@ -184,7 +195,7 @@
   function stopDragging() {
     dragging = false;
   }
-  /*    Input Handling    */
+  //Legacy input handling code for reference with MouseWheel events.
   /*function canvasMouseWheel(e: WheelEvent) {
     let scrollDirection = e.deltaY;
     let worldPositionBefore = screenToWorld(e.clientX, e.clientY);
