@@ -14,14 +14,7 @@
   const PAN_DAMPING = 1;
   const ZOOM_STIFFNESS = 0.2;
   const ZOOM_DAMPING = 1;
-  const MOUSE_PAN_BUTTON = 4;
-  const MOUSE_SELECT_BUTTON = 1;
   const KEY_PAN_AMMOUNT = 100;
-  const KEY_PAN_LEFT = "ArrowLeft";
-  const KEY_PAN_RIGHT = "ArrowRight";
-  const KEY_PAN_UP = "ArrowUp";
-  const KEY_PAN_DOWN = "ArrowDown";
-  const KEY_MOUSE_PAN = "Alt";
 
   const SCROLL_ZOOM_MULTIPLIER = 2;
 
