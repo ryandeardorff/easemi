@@ -23,36 +23,44 @@
   WINDOW_PIXEL_RESOLUTION = window.devicePixelRatio;
 
   /*   Keyboard Input   */
-  let activeKeys = [];
-  //TODO: Create a comparison for key combinations, possibly tie them to temp functions.
+  //TODO: Investigate moving this into a module component or script in some way.
+  let activeKeys: String[] = [];
+  let shortcuts = [{ keys: ["shift", "a"], keyDown: () => testfunc(), keyUp: () => null }]; //eventually this should be implemented somewhere for saving/storage + json parse
   //Define a basic keybindings menu, with defaults (not fully mapped yet)
-  //create a way to tie into either keydown or keyup events specifically, whether that's cleaning up the functions themselves, or otherwise.
 
   document.addEventListener("keydown", keyDown);
   function keyDown(e: KeyboardEvent) {
-    e.preventDefault(); //TODO: only prevent default on key combinations used, or when setting new keybindings
     let processedKey = processKey(e.key);
     if (e.repeat) {
       return;
     }
-    //TODO: Try splitting active key management into a separate function?
-    if (activeKeys.includes(processedKey)) {
-      return;
+    //Adds keys to the activeKeys array
+    if (!activeKeys.includes(processedKey)) {
+      activeKeys.push(processedKey);
     }
-    activeKeys.push(processedKey);
-    console.log(activeKeys);
+    if (keyShortcut(true)) {
+      e.preventDefault();
+    }
   }
 
   document.addEventListener("keyup", keyUp);
-  //TODO: Same as above, also look into whether keys getting stuck will be an issue.
   function keyUp(e: KeyboardEvent) {
     e.preventDefault();
     let processedKey = processKey(e.key);
-    if (!activeKeys.includes(processedKey)) {
-      return;
+    keyShortcut(false);
+    if (activeKeys.includes(processedKey)) {
+      activeKeys.splice(activeKeys.indexOf(processedKey), 1);
     }
-    activeKeys.splice(activeKeys.indexOf(processedKey), 1);
-    console.log(activeKeys);
+  }
+
+  /*   Window Focus   */
+  window.addEventListener("focus", windowFocus);
+  function windowFocus() {}
+
+  window.addEventListener("blur", windowBlur);
+  function windowBlur() {
+    keyShortcut(false); //runs the keyup event for any given shortcut, watch for bugs with this!
+    activeKeys = [];
   }
 
   //Processes key inputs to remove duplicate keys-- Watch for errors with toLowercase, may need to only apply it to certain key ranges
@@ -60,6 +68,25 @@
     let processedKey = key;
     processedKey = processedKey.toLowerCase();
     return processedKey;
+  }
+
+  //Tests for key combinations, returns true if processed
+  function keyShortcut(keyDown: boolean): boolean {
+    for (let shortcut of shortcuts) {
+      if (activeKeys.toString() == shortcut.keys.toString()) {
+        if (keyDown) {
+          shortcut.keyDown();
+        } else {
+          shortcut.keyUp();
+        }
+
+        return true;
+      }
+    }
+  }
+
+  function testfunc() {
+    console.log("testfunc");
   }
 
   /*   Canvas Transformations   */
