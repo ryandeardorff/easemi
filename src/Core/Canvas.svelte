@@ -89,6 +89,28 @@
     console.log("testfunc");
   }
 
+  /*   Mouse Input   */ 
+  //TODO: Work out mouse input, how to separate it out, while also allowing flexibility with crossmapping and the keyboard.
+  const mouseFunctions = { 
+    BOX_SELECT: "boxSelect"
+  }
+  let mouseMapping = [{ function: "mouseLeft", button: 0 }]
+  const mouseState = {
+    DEFAULT: "default",
+  };
+  const mouseContext = {
+    CANVAS: {
+      BACKGROUND: "background",
+    },
+  };
+  let mouseCurrentState = mouseState.DEFAULT;
+  function backgroundMouseDown(e: MouseEvent) {
+    switch e.button{
+      case 0:
+        
+    }
+  }
+
   /*   Canvas Transformations   */
   //Send to the Store the combined spring target values for world space calculations.
   $: $canvasTargetTranslation = Vector.addEach(panTarget, {
@@ -237,7 +259,7 @@
 </script>
 
 <div id="canvas">
-  <div id="background" />
+  <div id="background" on:mousedown={backgroundMouseDown} />
 
   <Selection
     translateX={selectionPositionScreen.x}
