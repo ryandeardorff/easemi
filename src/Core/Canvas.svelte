@@ -25,7 +25,9 @@
   /*   Keyboard Input   */
   //TODO: Investigate moving this into a module component or script in some way.
   let activeKeys: String[] = [];
-  let shortcuts = [{ keys: ["shift", "a"], keyDown: () => testfunc(), keyUp: () => null }]; //eventually this should be implemented somewhere for saving/storage + json parse
+  let shortcuts = [
+    { keys: ["shift", "a"], keyDown: (e: KeyboardEvent) => testfunc(e), keyUp: (e: KeyboardEvent) => null },
+  ]; //eventually this should be implemented somewhere for saving/storage + json parse
   //Define a basic keybindings menu, with defaults (not fully mapped yet)
 
   document.addEventListener("keydown", keyDown);
@@ -38,7 +40,7 @@
     if (!activeKeys.includes(processedKey)) {
       activeKeys.push(processedKey);
     }
-    if (keyShortcut(true)) {
+    if (keyShortcut(true, e)) {
       e.preventDefault();
     }
   }
@@ -71,13 +73,13 @@
   }
 
   //Tests for key combinations, returns true if processed
-  function keyShortcut(keyDown: boolean): boolean {
+  function keyShortcut(keyDown: boolean, e: keyboardEvent = null): boolean {
     for (let shortcut of shortcuts) {
       if (activeKeys.toString() == shortcut.keys.toString()) {
         if (keyDown) {
-          shortcut.keyDown();
+          shortcut.keyDown(e);
         } else {
-          shortcut.keyUp();
+          shortcut.keyUp(e);
         }
 
         return true;
@@ -85,16 +87,16 @@
     }
   }
 
-  function testfunc() {
-    console.log("testfunc");
+  function testfunc(e: Event) {
+    console.log("testfunc", e.target);
   }
 
-  /*   Mouse Input   */ 
+  /*   Mouse Input   */
   //TODO: Work out mouse input, how to separate it out, while also allowing flexibility with crossmapping and the keyboard.
-  const mouseFunctions = { 
-    BOX_SELECT: "boxSelect"
-  }
-  let mouseMapping = [{ function: "mouseLeft", button: 0 }]
+  const mouseFunctions = {
+    BOX_SELECT: "boxSelect",
+  };
+  let mouseMapping = [{ function: "mouseLeft", button: 0 }];
   const mouseState = {
     DEFAULT: "default",
   };
@@ -105,9 +107,9 @@
   };
   let mouseCurrentState = mouseState.DEFAULT;
   function backgroundMouseDown(e: MouseEvent) {
-    switch e.button{
+    switch (e.button) {
       case 0:
-        
+        break;
     }
   }
 
