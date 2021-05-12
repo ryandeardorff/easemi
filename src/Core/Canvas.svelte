@@ -105,10 +105,14 @@
       BACKGROUND: "background",
     },
   };
+  let mouseCurrentButtons = [];
   let mouseCurrentState = mouseState.DEFAULT;
   function backgroundMouseDown(e: MouseEvent) {
     switch (e.button) {
       case 0:
+        if (mouseCurrentButtons.find("leftMouse")) {
+          break;
+        }
         break;
     }
   }
