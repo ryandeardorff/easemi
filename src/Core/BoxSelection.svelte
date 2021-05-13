@@ -15,7 +15,7 @@
     visibility:{visibility};
   "
 >
-  <rect id="selection-box" x="3" y="3" width={Math.max(3, scaleX - 6)} height={Math.max(3, scaleY - 6)} rx="0" />
+  <rect id="selection-box" x="3" y="3" width={Math.max(3, scaleX - 6)} height={Math.max(3, scaleY - 6)} rx="5" />
 </svg>
 
 <style>

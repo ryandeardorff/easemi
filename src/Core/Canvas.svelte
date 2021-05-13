@@ -18,7 +18,7 @@
     operations,
     mappings,
   } from "../stores";
-  import Selection from "./Selection.svelte";
+  import Selection from "./BoxSelection.svelte";
   import CanvasItem from "./CanvasItem.svelte";
   import {
     compareInput,
@@ -235,54 +235,54 @@
 
   /*   Box Selections   */
   //TODO: Refactor these functions as box selections rather than just "selection"s.
-  let selectionStart = { x: 0, y: 0 };
-  let selectionScale = { x: 1000, y: 1000 };
-  let selectionPosition = { x: 0, y: 0 };
+  let boxSelectionStart = { x: 0, y: 0 };
+  let boxSelectionScale = { x: 1000, y: 1000 };
+  let boxSelectionPosition = { x: 0, y: 0 };
   let selecting = false;
-  let selectionVisibility = "hidden";
+  let boxSelectionVisibility = "hidden";
   function startSelection(x: number, y: number, additive: boolean) {
     selecting = true;
-    selectionStart = screenToWorld(x, y);
-    selectionScale = { x: 0, y: 0 };
-    selectionPosition = { x: 0, y: 0 };
-    selectionVisibility = "hidden";
+    boxSelectionStart = screenToWorld(x, y);
+    boxSelectionScale = { x: 0, y: 0 };
+    boxSelectionPosition = { x: 0, y: 0 };
+    boxSelectionVisibility = "hidden";
     if (!additive) {
       clearSelection();
     }
   }
   function dragSelection(cx: number, cy: number, additive: boolean) {
     let currentToWorld = screenToWorld(cx, cy);
-    let square = squareNormalization(selectionStart, currentToWorld);
-    selectionScale = { x: square.width, y: square.height };
-    selectionPosition = { x: square.x, y: square.y };
-    selectionVisibility = "visible";
+    let square = squareNormalization(boxSelectionStart, currentToWorld);
+    boxSelectionScale = { x: square.width, y: square.height };
+    boxSelectionPosition = { x: square.x, y: square.y };
+    boxSelectionVisibility = "visible";
     compareSelection(additive);
   }
   function endSelection() {
     selecting = false;
-    selectionVisibility = "hidden";
+    boxSelectionVisibility = "hidden";
   }
 
-  let selectionScaleScreen = { x: 0, y: 0 };
-  $: selectionPositionScreen = worldToScreen(
-    selectionPosition.x,
-    selectionPosition.y,
+  let boxSelectionScaleScreen = { x: 0, y: 0 };
+  $: boxSelectionPositionScreen = worldToScreen(
+    boxSelectionPosition.x,
+    boxSelectionPosition.y,
     $canvasCurrentTranslation.x,
     $canvasCurrentTranslation.y,
     $canvasCurrentScale
   );
-  $: selectionScaleScreen = Vector.multiplyBoth(selectionScale, $canvasCurrentScale);
+  $: boxSelectionScaleScreen = Vector.multiplyBoth(boxSelectionScale, $canvasCurrentScale);
 
-  //Function that compares elements to the selection box.
+  //Function that compares elements to the boxSelection box.
   function compareSelection(additive: boolean) {
     for (let item of $canvasItems) {
       if (
         overlappingRect(
-          new DOMRect(selectionPosition.x, selectionPosition.y, selectionScale.x, selectionScale.y),
+          new DOMRect(boxSelectionPosition.x, boxSelectionPosition.y, boxSelectionScale.x, boxSelectionScale.y),
           new DOMRect(item.position.x, item.position.y, item.scale.x, item.scale.y)
         )
       ) {
-        //TODO: split element selection into a separate function that could be called by a mouse events.
+        //TODO: split element boxSelection into a separate function that could be called by a mouse events.
         item.selected = true;
       } else if (!additive) {
         item.selected = false;
@@ -314,11 +314,11 @@
   <div id="background" on:mousedown={backgroundMouseDown} />
 
   <Selection
-    translateX={selectionPositionScreen.x}
-    translateY={selectionPositionScreen.y}
-    scaleX={selectionScaleScreen.x}
-    scaleY={selectionScaleScreen.y}
-    visibility={selectionVisibility}
+    translateX={boxSelectionPositionScreen.x}
+    translateY={boxSelectionPositionScreen.y}
+    scaleX={boxSelectionScaleScreen.x}
+    scaleY={boxSelectionScaleScreen.y}
+    visibility={boxSelectionVisibility}
   />
 
   <div
