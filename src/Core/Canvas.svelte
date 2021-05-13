@@ -18,7 +18,8 @@
     operations,
     mappings,
   } from "../stores";
-  import Selection from "./BoxSelection.svelte";
+  import BoxSelection from "./BoxSelection.svelte";
+  import Selection from "./Selection.svelte";
   import CanvasItem from "./CanvasItem.svelte";
   import {
     compareInput,
@@ -43,9 +44,6 @@
   WINDOW_PIXEL_RESOLUTION = window.devicePixelRatio;
 
   /*   Keyboard Input   */
-  //TODO: Investigate moving this into a module component or script in some way.
-  //eventually this should be implemented somewhere for saving/storage + json parse
-  //Define a basic keybindings menu, with defaults (not fully mapped yet)
 
   document.addEventListener("keydown", keyDown);
   function keyDown(e: KeyboardEvent) {
@@ -320,13 +318,15 @@
 <div id="canvas" on:mousedown={canvasMouseDown} on:mousewheel={canvasMouseWheel}>
   <div id="background" on:mousedown={backgroundMouseDown} />
 
-  <Selection
+  <BoxSelection
     translateX={boxSelectionPositionScreen.x}
     translateY={boxSelectionPositionScreen.y}
     scaleX={boxSelectionScaleScreen.x}
     scaleY={boxSelectionScaleScreen.y}
     visibility={boxSelectionVisibility}
   />
+
+  <Selection />
 
   <div
     id="contents"
@@ -337,7 +337,7 @@
         <svelte:component this={item.component} />
       </CanvasItem>
     {/each}
-    <!--<p>yo this is a test</p>
+    <!--<p>yo this is a test</p>jj
     <p>yo this is a test</p>
     <img class="selectable" src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png" alt="test" />-->
   </div>

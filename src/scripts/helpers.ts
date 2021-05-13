@@ -17,6 +17,7 @@ function screenToWorld(
   customScale: number = null
 ): { x: number; y: number } {
   let canvas = getCanvasValues();
+  let devicePixelRatio = window.devicePixelRatio;
   if (customX != null) {
     canvas.offset.x = customX;
   }
@@ -40,6 +41,7 @@ function worldToScreen(
 ): { x: number; y: number } {
   let canvas: { offset: { x: number; y: number }; scale: number };
   canvas = { offset: { x: 0, y: 0 }, scale: 1 };
+  let devicePixelRatio = window.devicePixelRatio;
   if (customX != null) {
     canvas.offset.x = customX;
   }
