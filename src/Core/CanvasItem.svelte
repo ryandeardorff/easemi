@@ -31,7 +31,7 @@
   let dragStart = { x: 0, y: 0 };
   function mouseDown(e: MouseEvent) {
     pushInput(mouseButtonMap[e.button]);
-    if (compareInput(operations.ITEM.SELECT)) {
+    if (compareInput(operations.ITEM.SELECT) || compareInput(operations.ITEM.SELECT_ADDITIVE)) {
       selectInputDown();
     }
     if (compareInput(operations.ITEM.MOVE)) {
@@ -61,17 +61,22 @@
       movePressed = false;
       dragging = false;
     }
+    if (!compareInput(operations.ITEM.SELECT_ADDITIVE) && selectPressed) {
+      selectInputUp(true);
+    }
     if (!compareInput(operations.ITEM.SELECT) && selectPressed) {
-      selectInputUp();
+      selectInputUp(false);
     }
   }
 
   function selectInputDown() {
     selectPressed = true;
   }
-  function selectInputUp() {
+  function selectInputUp(additive = false) {
     if (selectPressed) {
-      clearSelection();
+      if (!additive) {
+        clearSelection();
+      }
       canvasItem.selected = true;
       canvasItems.update((u) => u);
     }
@@ -106,11 +111,14 @@
     transform-origin: top left;
     width: var(--scaleX);
     height: var(--scaleY);
+    transition-duration: 300ms;
+    transition-property: box-shadow, border-radius;
+    overflow: hidden;
   }
   .selected {
     --test: calc(8px / var(--canvasZoom));
-    overflow: hidden;
     border-radius: 20px;
     box-shadow: 0px 2px var(--test) rgba(0, 0, 0, 0.3);
+    transition-timing-function: cubic-bezier(0.225, 1.47, 0.42, 0.96);
   }
 </style>

@@ -15,7 +15,21 @@
     visibility:{visibility};
   "
 >
-  <rect id="selection-box" x="3" y="3" width={Math.max(3, scaleX - 6)} height={Math.max(3, scaleY - 6)} rx="5" />
+  <defs>
+    <filter id="selection-glow" x="-10" y="-10" width="200" height="200">
+      <feGaussianBlur result="blurOut" stdDeviation="10" />
+      <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
+    </filter>
+  </defs>
+  <rect
+    id="selection-box"
+    x="3"
+    y="3"
+    width={Math.max(3, scaleX - 6)}
+    height={Math.max(3, scaleY - 6)}
+    rx="5"
+    filter="url(#selection-glow)"
+  />
 </svg>
 
 <style>

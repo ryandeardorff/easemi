@@ -35,6 +35,7 @@ export let activeInput: string[] = [];
 export const operations = {
   ITEM: {
     SELECT: "item.select",
+    SELECT_ADDITIVE: "item.select_additive",
     MOVE: "item.move",
   },
   CANVAS: {
@@ -82,4 +83,5 @@ export let mappings: Mapping[] = [
   new Mapping(operations.CANVAS.ZOOM_OUT, ["scrollDown"]),
   new Mapping(operations.ITEM.MOVE, ["leftMouse"]),
   new Mapping(operations.ITEM.SELECT, ["leftMouse"]),
+  new Mapping(operations.ITEM.SELECT_ADDITIVE, ["shift", "leftMouse"]),
 ];

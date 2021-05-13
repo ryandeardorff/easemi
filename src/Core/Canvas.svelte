@@ -97,7 +97,10 @@
   function backgroundMouseDown(e: MouseEvent) {
     pushInput(mouseButtonMap[e.button]);
     if (compareInput(operations.CANVAS.BOX_SELECT)) {
-      startSelection(e.clientX, e.clientY, null);
+      startSelection(e.clientX, e.clientY, false);
+    }
+    if (compareInput(operations.CANVAS.BOX_SELECT_ADDITIVE)) {
+      startSelection(e.clientX, e.clientY, true);
     }
   }
 
@@ -157,7 +160,9 @@
   function boxSelectMouseMove(e: MouseEvent) {
     if (selecting) {
       if (compareInput(operations.CANVAS.BOX_SELECT)) {
-        dragSelection(e.clientX, e.clientY, null);
+        dragSelection(e.clientX, e.clientY, false);
+      } else if (compareInput(operations.CANVAS.BOX_SELECT_ADDITIVE)) {
+        dragSelection(e.clientX, e.clientY, true);
       } else {
         endSelection();
       }
@@ -167,7 +172,9 @@
     if (
       selecting &&
       activeInput.toString() !=
-        mappings.find((element) => element.operation == operations.CANVAS.BOX_SELECT).input.toString()
+        mappings
+          .find((element) => element.operation == operations.CANVAS.BOX_SELECT || operations.CANVAS.BOX_SELECT_ADDITIVE)
+          .input.toString()
     ) {
       endSelection();
     }
