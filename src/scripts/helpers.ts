@@ -75,6 +75,11 @@ class Vector {
     if (vector == null || multiplier == null) return;
     return { x: vector.x * multiplier.x, y: vector.y * multiplier.y };
   }
+
+  static getLength(vector: { x: number; y: number }): number {
+    if (vector == null) return;
+    return Math.sqrt(Math.pow(vector.x, 2) + Math.pow(vector.y, 2));
+  }
 }
 
 function overlappingRect(rect1: DOMRect, rect2: DOMRect): boolean {
@@ -113,8 +118,7 @@ function squareNormalization(
   return { x: position.x, y: position.y, width: scale.x, height: scale.y };
 }
 
-export { screenToWorld, worldToScreen, Vector, overlappingRect, squareNormalization };
-
-var test = 100;
-
-test;
+function clamp(num: number, min: number, max: number) {
+  return Math.min(Math.max(num, min), max);
+}
+export { screenToWorld, worldToScreen, Vector, overlappingRect, squareNormalization, clamp };

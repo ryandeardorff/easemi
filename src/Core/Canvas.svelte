@@ -1,15 +1,35 @@
 <script lang="ts">
   import { spring } from "svelte/motion";
-  import { screenToWorld, Vector, squareNormalization, worldToScreen, overlappingRect } from "../scripts/helpers";
+  import {
+    screenToWorld,
+    Vector,
+    squareNormalization,
+    worldToScreen,
+    overlappingRect,
+    clamp,
+  } from "../scripts/helpers";
   import {
     canvasTargetTranslation,
     canvasTargetScale,
     canvasCurrentScale,
     canvasCurrentTranslation,
     canvasItems,
-  } from "../stores.js";
+    activeInput,
+    operations,
+    mappings,
+  } from "../stores";
   import Selection from "./Selection.svelte";
   import CanvasItem from "./CanvasItem.svelte";
+  import {
+    compareInput,
+    mouseButtonMap,
+    processKey,
+    pushInput,
+    shortcutDown,
+    shortcutUp,
+    spliceInput,
+  } from "../scripts/input-management";
+  import { clearSelection } from "../scripts/selection-management";
   const PAN_STIFFNESS = 1;
   const PAN_DAMPING = 1;
   const ZOOM_STIFFNESS = 0.2;
@@ -24,10 +44,7 @@
 
   /*   Keyboard Input   */
   //TODO: Investigate moving this into a module component or script in some way.
-  let activeKeys: String[] = [];
-  let shortcuts = [
-    { keys: ["shift", "a"], keyDown: (e: KeyboardEvent) => testfunc(e), keyUp: (e: KeyboardEvent) => null },
-  ]; //eventually this should be implemented somewhere for saving/storage + json parse
+  //eventually this should be implemented somewhere for saving/storage + json parse
   //Define a basic keybindings menu, with defaults (not fully mapped yet)
 
   document.addEventListener("keydown", keyDown);
@@ -36,23 +53,18 @@
     if (e.repeat) {
       return;
     }
-    //Adds keys to the activeKeys array
-    if (!activeKeys.includes(processedKey)) {
-      activeKeys.push(processedKey);
-    }
-    if (keyShortcut(true, e)) {
-      e.preventDefault();
-    }
+    pushInput(processedKey);
+    shortcutDown(e);
+    panInputStart(e);
   }
 
   document.addEventListener("keyup", keyUp);
   function keyUp(e: KeyboardEvent) {
     e.preventDefault();
     let processedKey = processKey(e.key);
-    keyShortcut(false);
-    if (activeKeys.includes(processedKey)) {
-      activeKeys.splice(activeKeys.indexOf(processedKey), 1);
-    }
+    shortcutUp(e);
+    spliceInput(processedKey);
+    panInputEnd();
   }
 
   /*   Window Focus   */
@@ -61,59 +73,103 @@
 
   window.addEventListener("blur", windowBlur);
   function windowBlur() {
-    keyShortcut(false); //runs the keyup event for any given shortcut, watch for bugs with this!
-    activeKeys = [];
+    shortcutUp(null); //runs the keyup event for any given shortcut, watch for bugs with this!
+    activeInput.splice(0, activeInput.length);
   }
 
-  //Processes key inputs to remove duplicate keys-- Watch for errors with toLowercase, may need to only apply it to certain key ranges
-  function processKey(key: String) {
-    let processedKey = key;
-    processedKey = processedKey.toLowerCase();
-    return processedKey;
+  document.addEventListener("mousedown", mouseDown);
+  function mouseDown(e: MouseEvent) {
+    pushInput(mouseButtonMap[e.button]);
+  }
+  document.addEventListener("mouseup", mouseUp);
+  function mouseUp(e: MouseEvent) {
+    spliceInput(mouseButtonMap[e.button]);
+
+    boxSelectMouseUp(e);
+    panInputEnd();
+  }
+  document.addEventListener("mousemove", mouseMove);
+  function mouseMove(e: MouseEvent) {
+    boxSelectMouseMove(e);
+    panMouseMove(e);
   }
 
-  //Tests for key combinations, returns true if processed
-  function keyShortcut(keyDown: boolean, e: keyboardEvent = null): boolean {
-    for (let shortcut of shortcuts) {
-      if (activeKeys.toString() == shortcut.keys.toString()) {
-        if (keyDown) {
-          shortcut.keyDown(e);
-        } else {
-          shortcut.keyUp(e);
-        }
+  function backgroundMouseDown(e: MouseEvent) {
+    pushInput(mouseButtonMap[e.button]);
+    if (compareInput(operations.CANVAS.BOX_SELECT)) {
+      startSelection(e.clientX, e.clientY, null);
+    }
+  }
 
-        return true;
+  function canvasMouseDown(e: MouseEvent) {
+    pushInput(mouseButtonMap[e.button]);
+    panInputStart(e);
+  }
+
+  function canvasMouseWheel(e: WheelEvent) {
+    switch (clamp(e.deltaY, -1, 1) * -1) {
+      case -1:
+        pushInput("scrollDown");
+        break;
+      case 1:
+        pushInput("scrollUp");
+        break;
+    }
+    const clientInit = screenToWorld(e.clientX, e.clientY);
+    zoomInput();
+    spliceInput("scrollDown");
+    spliceInput("scrollUp");
+    const clientNow = screenToWorld(e.clientX, e.clientY, null, null, zoomTarget.s);
+    let change = Vector.multiplyBoth(Vector.subtractEach(clientNow, clientInit), zoomTarget.s);
+    offsetZoom(change.x, change.y);
+  }
+
+  function panMouseMove(e: MouseEvent) {
+    if (panning) {
+      if (compareInput(operations.CANVAS.PAN)) {
+        pan(e.movementX, e.movementY);
+      }
+    }
+  }
+  function panInputStart(e: any) {
+    if (compareInput(operations.CANVAS.PAN)) {
+      panStart(e.clientX, e.clientY);
+      console.log("panstart");
+    }
+  }
+  function panInputEnd() {
+    if (panning) {
+      if (compareInput(operations.CANVAS.PAN)) {
+        panEnd();
       }
     }
   }
 
-  function testfunc(e: Event) {
-    console.log("testfunc", e.target);
+  function zoomInput() {
+    if (compareInput(operations.CANVAS.ZOOM_IN)) {
+      zoom(SCROLL_ZOOM_MULTIPLIER);
+    }
+    if (compareInput(operations.CANVAS.ZOOM_OUT)) {
+      zoom(-SCROLL_ZOOM_MULTIPLIER);
+    }
   }
 
-  /*   Mouse Input   */
-  //TODO: Work out mouse input, how to separate it out, while also allowing flexibility with crossmapping and the keyboard.
-  const mouseFunctions = {
-    BOX_SELECT: "boxSelect",
-  };
-  let mouseMapping = [{ function: "mouseLeft", button: 0 }];
-  const mouseState = {
-    DEFAULT: "default",
-  };
-  const mouseContext = {
-    CANVAS: {
-      BACKGROUND: "background",
-    },
-  };
-  let mouseCurrentButtons = [];
-  let mouseCurrentState = mouseState.DEFAULT;
-  function backgroundMouseDown(e: MouseEvent) {
-    switch (e.button) {
-      case 0:
-        if (mouseCurrentButtons.find("leftMouse")) {
-          break;
-        }
-        break;
+  function boxSelectMouseMove(e: MouseEvent) {
+    if (selecting) {
+      if (compareInput(operations.CANVAS.BOX_SELECT)) {
+        dragSelection(e.clientX, e.clientY, null);
+      } else {
+        endSelection();
+      }
+    }
+  }
+  function boxSelectMouseUp(e: MouseEvent) {
+    if (
+      selecting &&
+      activeInput.toString() !=
+        mappings.find((element) => element.operation == operations.CANVAS.BOX_SELECT).input.toString()
+    ) {
+      endSelection();
     }
   }
 
@@ -155,10 +211,17 @@
   $: $canvasCurrentTranslation = canvasTranslation;
 
   //Movement Functions
+  let panning = false;
   function pan(dx: number, dy: number) {
     panTarget.x = panTarget.x + dx / WINDOW_PIXEL_RESOLUTION;
     panTarget.y = panTarget.y + dy / WINDOW_PIXEL_RESOLUTION;
     panSpring.update(($panSpring) => panTarget);
+  }
+  function panStart(cx: number, cy: number) {
+    panning = true;
+  }
+  function panEnd() {
+    panning = false;
   }
   function offsetZoom(dx: number, dy: number) {
     zoomTarget.x = zoomTarget.x + dx;
@@ -228,12 +291,7 @@
     canvasItems.update((u) => u);
   }
 
-  function clearSelection() {
-    for (let item of $canvasItems.filter((item) => item.selected == true)) {
-      item.selected = false; //TODO: Split element deselection into a separate function
-    }
-    canvasItems.update((u) => u);
-  }
+  function selectItem() {}
 
   /*   Item Movement   */
   let dragging = false;
@@ -250,21 +308,9 @@
   function stopDragging() {
     dragging = false;
   }
-  //Legacy input handling code for reference with MouseWheel events.
-  /*function canvasMouseWheel(e: WheelEvent) {
-    let scrollDirection = e.deltaY;
-    let worldPositionBefore = screenToWorld(e.clientX, e.clientY);
-    zoom((scrollDirection / -100) * SCROLL_ZOOM_MULTIPLIER);
-    let worldPositionAfter = screenToWorld(e.clientX, e.clientY, null, null, zoomTarget.s);
-
-    offsetZoom(
-      (worldPositionAfter.x - worldPositionBefore.x) * zoomTarget.s,
-      (worldPositionAfter.y - worldPositionBefore.y) * zoomTarget.s
-    );
-  }*/
 </script>
 
-<div id="canvas">
+<div id="canvas" on:mousedown={canvasMouseDown} on:mousewheel={canvasMouseWheel}>
   <div id="background" on:mousedown={backgroundMouseDown} />
 
   <Selection
