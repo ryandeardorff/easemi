@@ -291,24 +291,6 @@
     }
     canvasItems.update((u) => u);
   }
-
-  function selectItem() {}
-
-  /*   Item Movement   */
-  let dragging = false;
-  function startDragging() {
-    dragging = true;
-  }
-  function dragItems(dx: number, dy: number) {
-    for (let item of $canvasItems.filter((item) => item.selected == true)) {
-      let transformVector = Vector.multiplyBoth({ x: dx, y: dy }, 1 / $canvasCurrentScale);
-      item.position = Vector.addEach(item.position, transformVector);
-    }
-    canvasItems.update((u) => u);
-  }
-  function stopDragging() {
-    dragging = false;
-  }
 </script>
 
 <div id="canvas" on:mousedown={canvasMouseDown} on:mousewheel={canvasMouseWheel}>
