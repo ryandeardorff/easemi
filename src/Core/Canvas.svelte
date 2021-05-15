@@ -39,10 +39,6 @@
 
   const SCROLL_ZOOM_MULTIPLIER = 2;
 
-  let WINDOW_PIXEL_RESOLUTION = 1;
-
-  WINDOW_PIXEL_RESOLUTION = window.devicePixelRatio;
-
   /*   Keyboard Input   */
 
   document.addEventListener("keydown", keyDown);
@@ -218,8 +214,8 @@
   //Movement Functions
   let panning = false;
   function pan(dx: number, dy: number) {
-    panTarget.x = panTarget.x + dx / WINDOW_PIXEL_RESOLUTION;
-    panTarget.y = panTarget.y + dy / WINDOW_PIXEL_RESOLUTION;
+    panTarget.x = panTarget.x + dx / devicePixelRatio;
+    panTarget.y = panTarget.y + dy / devicePixelRatio;
     panSpring.update(($panSpring) => panTarget);
   }
   function panStart(cx: number, cy: number) {

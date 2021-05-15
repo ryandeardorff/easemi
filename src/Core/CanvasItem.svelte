@@ -52,7 +52,7 @@
       }
     }
     if (compareInput(operations.ITEM.MOVE) && movePressed && dragging) {
-      dragItems(e.movementX, e.movementY);
+      dragItems(e.movementX / devicePixelRatio, e.movementY / devicePixelRatio);
       selectPressed = false;
     }
   }
