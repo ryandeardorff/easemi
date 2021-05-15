@@ -3,6 +3,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import livereload from 'rollup-plugin-livereload';
 import { terser } from 'rollup-plugin-terser';
+import sveltePreprocess from 'svelte-preprocess';
 import autoPreprocess from 'svelte-preprocess';
 import typescript from '@rollup/plugin-typescript';
 import css from 'rollup-plugin-css-only';
@@ -41,6 +42,7 @@ export default {
 	plugins: [
 		svelte({
 			preprocess: autoPreprocess(),
+			preprocess: sveltePreprocess({ sourceMap: !production }),
 			compilerOptions: {
 				// enable run-time checks when not in production
 				dev: !production
@@ -59,13 +61,11 @@ export default {
 			browser: true,
 			dedupe: ['svelte']
 		}),
+		commonjs(),
 		typescript({
 			sourceMap: !production,
-			inlineSources: !production,
-			rootDir: './src',
-			sourceMap: !production,
+			inlineSources: !production
 		}),
-		commonjs(),
 
 		// In dev mode, call `npm run start` once
 		// the bundle has been generated
