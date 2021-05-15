@@ -40,6 +40,7 @@ function worldToScreen(
 ): { x: number; y: number } {
   let canvas: { offset: { x: number; y: number }; scale: number };
   canvas = { offset: { x: 0, y: 0 }, scale: 1 };
+  let devicePixelRatio = window.devicePixelRatio;
   if (customX != null) {
     canvas.offset.x = customX;
   }
@@ -74,6 +75,11 @@ class Vector {
   ): { x: number; y: number } {
     if (vector == null || multiplier == null) return;
     return { x: vector.x * multiplier.x, y: vector.y * multiplier.y };
+  }
+
+  static getLength(vector: { x: number; y: number }): number {
+    if (vector == null) return;
+    return Math.sqrt(Math.pow(vector.x, 2) + Math.pow(vector.y, 2));
   }
 }
 
@@ -113,8 +119,7 @@ function squareNormalization(
   return { x: position.x, y: position.y, width: scale.x, height: scale.y };
 }
 
-export { screenToWorld, worldToScreen, Vector, overlappingRect, squareNormalization };
-
-var test = 100;
-
-test;
+function clamp(num: number, min: number, max: number) {
+  return Math.min(Math.max(num, min), max);
+}
+export { screenToWorld, worldToScreen, Vector, overlappingRect, squareNormalization, clamp };

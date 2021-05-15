@@ -1,52 +1,157 @@
 <script lang="ts">
   import { spring } from "svelte/motion";
-  import { screenToWorld, Vector, squareNormalization, worldToScreen, overlappingRect } from "../scripts/helpers";
+  import {
+    screenToWorld,
+    Vector,
+    squareNormalization,
+    worldToScreen,
+    overlappingRect,
+    clamp,
+  } from "../scripts/helpers";
   import {
     canvasTargetTranslation,
     canvasTargetScale,
     canvasCurrentScale,
     canvasCurrentTranslation,
     canvasItems,
-  } from "../stores.js";
+    activeInput,
+    operations,
+    mappings,
+  } from "../stores";
+  import BoxSelection from "./BoxSelection.svelte";
   import Selection from "./Selection.svelte";
   import CanvasItem from "./CanvasItem.svelte";
+  import {
+    compareInput,
+    mouseButtonMap,
+    processKey,
+    pushInput,
+    shortcutDown,
+    shortcutUp,
+    spliceInput,
+  } from "../scripts/input-management";
+  import { clearSelection } from "../scripts/selection-management";
   const PAN_STIFFNESS = 1;
   const PAN_DAMPING = 1;
   const ZOOM_STIFFNESS = 0.2;
   const ZOOM_DAMPING = 1;
-  const MOUSE_PAN_BUTTON = 4;
-  const MOUSE_SELECT_BUTTON = 1;
   const KEY_PAN_AMMOUNT = 100;
-  const KEY_PAN_LEFT = "ArrowLeft";
-  const KEY_PAN_RIGHT = "ArrowRight";
-  const KEY_PAN_UP = "ArrowUp";
-  const KEY_PAN_DOWN = "ArrowDown";
-  const KEY_MOUSE_PAN = "Alt";
 
   const SCROLL_ZOOM_MULTIPLIER = 2;
 
-  let WINDOW_PIXEL_RESOLUTION = 1;
+  let boxSelection: BoxSelection;
 
-  WINDOW_PIXEL_RESOLUTION = window.devicePixelRatio;
+  /*   Keyboard Input   */
 
-  document.onkeydown = function (event) {
-    let char = typeof event !== "undefined" ? event.key : event.which;
-    switch (char) {
-      case KEY_PAN_LEFT:
-        pan(-KEY_PAN_AMMOUNT, 0);
+  document.addEventListener("keydown", keyDown);
+  function keyDown(e: KeyboardEvent) {
+    let processedKey = processKey(e.key);
+    if (e.repeat) {
+      return;
+    }
+    pushInput(processedKey);
+    shortcutDown(e);
+    panInputStart(e);
+  }
+
+  document.addEventListener("keyup", keyUp);
+  function keyUp(e: KeyboardEvent) {
+    e.preventDefault();
+    let processedKey = processKey(e.key);
+    shortcutUp(e);
+    spliceInput(processedKey);
+    panInputEnd();
+  }
+
+  /*   Window Focus   */
+  window.addEventListener("focus", windowFocus);
+  function windowFocus() {}
+
+  window.addEventListener("blur", windowBlur);
+  function windowBlur() {
+    shortcutUp(null); //runs the keyup event for any given shortcut, watch for bugs with this!
+    activeInput.splice(0, activeInput.length);
+  }
+
+  document.addEventListener("mousedown", mouseDown);
+  function mouseDown(e: MouseEvent) {
+    pushInput(mouseButtonMap[e.button]);
+  }
+  document.addEventListener("mouseup", mouseUp);
+  function mouseUp(e: MouseEvent) {
+    spliceInput(mouseButtonMap[e.button]);
+
+    panInputEnd();
+  }
+  document.addEventListener("mousemove", mouseMove);
+  function mouseMove(e: MouseEvent) {
+    panMouseMove(e);
+  }
+
+  function backgroundMouseDown(e: MouseEvent) {
+    pushInput(mouseButtonMap[e.button]);
+    if (compareInput(operations.CANVAS.BOX_SELECT)) {
+      boxSelection.backgroundStartBoxSelection(e.clientX, e.clientY, false);
+    }
+    if (compareInput(operations.CANVAS.BOX_SELECT_ADDITIVE)) {
+      boxSelection.backgroundStartBoxSelection(e.clientX, e.clientY, true);
+    }
+  }
+
+  function canvasMouseDown(e: MouseEvent) {
+    pushInput(mouseButtonMap[e.button]);
+    panInputStart(e);
+  }
+
+  function canvasMouseWheel(e: WheelEvent) {
+    switch (clamp(e.deltaY, -1, 1) * -1) {
+      case -1:
+        pushInput("scrollDown");
         break;
-      case KEY_PAN_RIGHT:
-        pan(KEY_PAN_AMMOUNT, 0);
-        break;
-      case KEY_PAN_UP:
-        pan(0, -KEY_PAN_AMMOUNT);
-        break;
-      case KEY_PAN_DOWN:
-        pan(0, KEY_PAN_AMMOUNT);
+      case 1:
+        pushInput("scrollUp");
         break;
     }
-  };
+    const clientInit = screenToWorld(e.clientX, e.clientY);
+    zoomInput();
+    spliceInput("scrollDown");
+    spliceInput("scrollUp");
+    const clientNow = screenToWorld(e.clientX, e.clientY, null, null, zoomTarget.s);
+    let change = Vector.multiplyBoth(Vector.subtractEach(clientNow, clientInit), zoomTarget.s);
+    offsetZoom(change.x, change.y);
+  }
 
+  function panMouseMove(e: MouseEvent) {
+    if (panning) {
+      if (compareInput(operations.CANVAS.PAN)) {
+        pan(e.movementX, e.movementY);
+      }
+    }
+  }
+  function panInputStart(e: any) {
+    if (compareInput(operations.CANVAS.PAN)) {
+      panStart(e.clientX, e.clientY);
+      console.log("panstart");
+    }
+  }
+  function panInputEnd() {
+    if (panning) {
+      if (compareInput(operations.CANVAS.PAN)) {
+        panEnd();
+      }
+    }
+  }
+
+  function zoomInput() {
+    if (compareInput(operations.CANVAS.ZOOM_IN)) {
+      zoom(SCROLL_ZOOM_MULTIPLIER);
+    }
+    if (compareInput(operations.CANVAS.ZOOM_OUT)) {
+      zoom(-SCROLL_ZOOM_MULTIPLIER);
+    }
+  }
+
+  /*   Canvas Transformations   */
   //Send to the Store the combined spring target values for world space calculations.
   $: $canvasTargetTranslation = Vector.addEach(panTarget, {
     x: zoomTarget.x,
@@ -61,7 +166,7 @@
     {
       stiffness: PAN_STIFFNESS,
       damping: PAN_DAMPING,
-      precision: 0.0000001,
+      precision: 0.0001,
     }
   );
 
@@ -72,7 +177,7 @@
     {
       stiffness: ZOOM_STIFFNESS,
       damping: ZOOM_DAMPING,
-      precision: 0.0000001,
+      precision: 0.0001,
     }
   );
 
@@ -83,10 +188,18 @@
   $: $canvasCurrentScale = canvasZoom;
   $: $canvasCurrentTranslation = canvasTranslation;
 
+  //Movement Functions
+  let panning = false;
   function pan(dx: number, dy: number) {
-    panTarget.x = panTarget.x + dx / WINDOW_PIXEL_RESOLUTION;
-    panTarget.y = panTarget.y + dy / WINDOW_PIXEL_RESOLUTION;
+    panTarget.x = panTarget.x + dx / devicePixelRatio;
+    panTarget.y = panTarget.y + dy / devicePixelRatio;
     panSpring.update(($panSpring) => panTarget);
+  }
+  function panStart(cx: number, cy: number) {
+    panning = true;
+  }
+  function panEnd() {
+    panning = false;
   }
   function offsetZoom(dx: number, dy: number) {
     zoomTarget.x = zoomTarget.x + dx;
@@ -97,188 +210,25 @@
     zoomTarget.s = zoomTarget.s + ds * zoomTarget.s * 0.1;
     zoomSpring.update(($zoomSpring) => zoomTarget);
   }
-
-  //TODO: look into moving selection visuals outside of world space,
-  //also look into how to avoid snapping at high zoom levels for future features,
-  //as well as for the world space related calculations of this selection feature.
-  let selectionStart = { x: 0, y: 0 };
-  let selectionScale = { x: 1000, y: 1000 };
-  let selectionPosition = { x: 0, y: 0 };
-  let selecting = false;
-  let selectionVisibility = "hidden";
-  function startSelection(x: number, y: number, additive: boolean) {
-    selecting = true;
-    selectionStart = screenToWorld(x, y);
-    selectionScale = { x: 0, y: 0 };
-    selectionPosition = { x: 0, y: 0 };
-    selectionVisibility = "hidden";
-    if (!additive) {
-      clearSelection();
-    }
-  }
-  function dragSelection(cx: number, cy: number, additive: boolean) {
-    let currentToWorld = screenToWorld(cx, cy);
-    let square = squareNormalization(selectionStart, currentToWorld);
-    selectionScale = { x: square.width, y: square.height };
-    selectionPosition = { x: square.x, y: square.y };
-    selectionVisibility = "visible";
-    compareSelection(additive);
-  }
-  function endSelection() {
-    selecting = false;
-    selectionVisibility = "hidden";
-  }
-
-  let selectionScaleScreen = { x: 0, y: 0 };
-  $: selectionPositionScreen = worldToScreen(
-    selectionPosition.x,
-    selectionPosition.y,
-    $canvasCurrentTranslation.x,
-    $canvasCurrentTranslation.y,
-    $canvasCurrentScale
-  );
-  $: selectionScaleScreen = Vector.multiplyBoth(selectionScale, $canvasCurrentScale);
-
-  function compareSelection(additive: boolean) {
-    for (let item of $canvasItems) {
-      if (
-        overlappingRect(
-          new DOMRect(selectionPosition.x, selectionPosition.y, selectionScale.x, selectionScale.y),
-          new DOMRect(item.position.x, item.position.y, item.scale.x, item.scale.y)
-        )
-      ) {
-        item.selected = true;
-      } else if (!additive) {
-        item.selected = false;
-      }
-    }
-    canvasItems.update((u) => u);
-  }
-
-  function clearSelection() {
-    for (let item of $canvasItems.filter((item) => item.selected == true)) {
-      item.selected = false;
-    }
-    canvasItems.update((u) => u);
-  }
-
-  let dragging = false;
-  function startDragging() {
-    dragging = true;
-  }
-  function dragItems(dx: number, dy: number) {
-    for (let item of $canvasItems.filter((item) => item.selected == true)) {
-      let transformVector = Vector.multiplyBoth({ x: dx, y: dy }, 1 / $canvasCurrentScale);
-      item.position = Vector.addEach(item.position, transformVector);
-    }
-    canvasItems.update((u) => u);
-  }
-  function stopDragging() {
-    dragging = false;
-  }
-  /*    Input Handling    */
-  function canvasMouseDown(e: MouseEvent) {}
-  function canvasMouseUp(e: MouseEvent) {
-    if (!dragging && !selecting) {
-      clearSelection();
-    }
-    endSelection();
-    stopDragging();
-  }
-  function canvasMouseMove(e: MouseEvent) {
-    switch (e.buttons) {
-      case MOUSE_PAN_BUTTON:
-        pan(e.movementX, e.movementY);
-        break;
-      case MOUSE_SELECT_BUTTON:
-        if (selecting) {
-          dragSelection(e.clientX, e.clientY, e.shiftKey);
-        } else if (dragging) {
-          dragItems(e.movementX, e.movementY);
-        }
-        break;
-      default:
-        endSelection();
-    }
-    if (e.getModifierState(KEY_MOUSE_PAN)) {
-      pan(e.movementX, e.movementY);
-    }
-  }
-  function canvasMouseWheel(e: WheelEvent) {
-    let scrollDirection = e.deltaY;
-    let worldPositionBefore = screenToWorld(e.clientX, e.clientY);
-    zoom((scrollDirection / -100) * SCROLL_ZOOM_MULTIPLIER);
-    let worldPositionAfter = screenToWorld(e.clientX, e.clientY, null, null, zoomTarget.s);
-
-    offsetZoom(
-      (worldPositionAfter.x - worldPositionBefore.x) * zoomTarget.s,
-      (worldPositionAfter.y - worldPositionBefore.y) * zoomTarget.s
-    );
-  }
-  function canvasMouseLeave(e: MouseEvent) {
-    //endSelection();
-  }
-  function backgroundMouseDown(e: MouseEvent) {
-    switch (e.buttons) {
-      case 1:
-        startSelection(e.clientX, e.clientY, e.shiftKey);
-        break;
-    }
-  }
-  function canvasItemMouseDown(e: MouseEvent, itemId: "") {
-    let canvasItem = $canvasItems.find((item) => item.id == itemId);
-    switch (e.buttons) {
-      case MOUSE_SELECT_BUTTON:
-        if (e.shiftKey && canvasItem.selected) {
-          canvasItem.selected = false;
-        } else {
-          canvasItem.selected = true;
-        }
-        startDragging(); //TODO: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-        //AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Okay, so mouse handling needs to be completely reworked, abstract out
-        //some drag functionality, ideally with a radius and such to make it easier for people with jittery hands and such.
-        //Maybe trackpad support too if we're feeling crazy.
-        //Look at reworking key input to be able to query for whatever key is assigned for additive selection mode. Also look at
-        //cutting down on the number of queries to the store, those will likely get slow.
-        break;
-    }
-    canvasItems.update((u) => u);
-  }
 </script>
 
-<div
-  id="canvas"
-  on:mousedown={canvasMouseDown}
-  on:mouseup={canvasMouseUp}
-  on:mousemove={canvasMouseMove}
-  on:mousewheel={canvasMouseWheel}
-  on:pointerleave={canvasMouseLeave}
->
+<div id="canvas" on:mousedown={canvasMouseDown} on:wheel={canvasMouseWheel}>
   <div id="background" on:mousedown={backgroundMouseDown} />
 
-  <Selection
-    translateX={selectionPositionScreen.x}
-    translateY={selectionPositionScreen.y}
-    scaleX={selectionScaleScreen.x}
-    scaleY={selectionScaleScreen.y}
-    visibility={selectionVisibility}
-  />
+  <BoxSelection bind:this={boxSelection} />
+
+  <Selection />
 
   <div
     id="contents"
     style="transform: translate({canvasTranslation.x}px,{canvasTranslation.y}px)scale({canvasZoom},{canvasZoom})"
   >
     {#each $canvasItems as item, index}
-      <CanvasItem
-        itemId={item.id}
-        itemIndex={index}
-        on:mousedown={(e) => canvasItemMouseDown(e, item.id)}
-        on:clearselection={clearSelection}
-      >
+      <CanvasItem itemId={item.id} itemIndex={index} on:clearselection={clearSelection}>
         <svelte:component this={item.component} />
       </CanvasItem>
     {/each}
-    <!--<p>yo this is a test</p>
+    <!--<p>yo this is a test</p>jj
     <p>yo this is a test</p>
     <img class="selectable" src="https://pbs.twimg.com/profile_images/1121395911849062400/7exmJEg4.png" alt="test" />-->
   </div>
@@ -286,18 +236,20 @@
 
 <style>
   #canvas {
+    position: fixed;
     width: 100%;
     height: 100%;
-    position: fixed;
   }
   #background {
+    position: fixed; /* could be absolute as well */
     width: 100%;
     height: 100%;
     background-color: lightgray;
-    position: fixed;
   }
   #contents {
     position: absolute;
+    left: 0;
+    top: 0;
     transform-origin: top left;
     /* transform: translateX(var(--translateX)); */
     /*pointer-events: none;*/
