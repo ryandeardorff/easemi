@@ -91,10 +91,10 @@
   function backgroundMouseDown(e: MouseEvent) {
     pushInput(mouseButtonMap[e.button]);
     if (compareInput(operations.CANVAS.BOX_SELECT)) {
-      startSelection(e.clientX, e.clientY, false);
+      startBoxSelection(e.clientX, e.clientY, false);
     }
     if (compareInput(operations.CANVAS.BOX_SELECT_ADDITIVE)) {
-      startSelection(e.clientX, e.clientY, true);
+      startBoxSelection(e.clientX, e.clientY, true);
     }
   }
 
@@ -154,11 +154,11 @@
   function boxSelectMouseMove(e: MouseEvent) {
     if (selecting) {
       if (compareInput(operations.CANVAS.BOX_SELECT)) {
-        dragSelection(e.clientX, e.clientY, false);
+        dragBoxSelection(e.clientX, e.clientY, false);
       } else if (compareInput(operations.CANVAS.BOX_SELECT_ADDITIVE)) {
-        dragSelection(e.clientX, e.clientY, true);
+        dragBoxSelection(e.clientX, e.clientY, true);
       } else {
-        endSelection();
+        endBoxSelection();
       }
     }
   }
@@ -170,7 +170,7 @@
           .find((element) => element.operation == operations.CANVAS.BOX_SELECT || operations.CANVAS.BOX_SELECT_ADDITIVE)
           .input.toString()
     ) {
-      endSelection();
+      endBoxSelection();
     }
   }
 
@@ -241,7 +241,7 @@
   let boxSelectionPosition = { x: 0, y: 0 };
   let selecting = false;
   let boxSelectionVisibility = "hidden";
-  function startSelection(x: number, y: number, additive: boolean) {
+  function startBoxSelection(x: number, y: number, additive: boolean) {
     selecting = true;
     boxSelectionStart = screenToWorld(x, y);
     boxSelectionScale = { x: 0, y: 0 };
@@ -251,7 +251,7 @@
       clearSelection();
     }
   }
-  function dragSelection(cx: number, cy: number, additive: boolean) {
+  function dragBoxSelection(cx: number, cy: number, additive: boolean) {
     let currentToWorld = screenToWorld(cx, cy);
     let square = squareNormalization(boxSelectionStart, currentToWorld);
     boxSelectionScale = { x: square.width, y: square.height };
@@ -259,7 +259,7 @@
     boxSelectionVisibility = "visible";
     compareSelection(additive);
   }
-  function endSelection() {
+  function endBoxSelection() {
     selecting = false;
     boxSelectionVisibility = "hidden";
   }
@@ -341,18 +341,20 @@
 
 <style>
   #canvas {
+    position: fixed;
     width: 100%;
     height: 100%;
-    position: fixed;
   }
   #background {
+    position: fixed; /* could be absolute as well */
     width: 100%;
     height: 100%;
     background-color: lightgray;
-    position: fixed;
   }
   #contents {
     position: absolute;
+    left: 0;
+    top: 0;
     transform-origin: top left;
     /* transform: translateX(var(--translateX)); */
     /*pointer-events: none;*/

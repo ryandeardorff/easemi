@@ -1,7 +1,14 @@
 <script lang="ts"></script>
 
-<svg>
-  <rect width="100px" height="100px" />
-</svg>
+<div id="selection">
+  <svg>
+    <rect width="100px" height="100px" />
+  </svg>
+</div>
 
-<style></style>
+<style>
+  #selection {
+    z-index: 100;
+    background-color: black;
+  }
+</style>
