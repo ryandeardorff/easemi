@@ -120,7 +120,7 @@
     width: var(--scaleX);
     height: var(--scaleY);
     transition-duration: 300ms;
-    transition-property: box-shadow, border-radius;
+    transition-property: border-radius;
     overflow: hidden;
   }
   .selectable {
@@ -132,7 +132,6 @@
     --test: calc(8px / var(--canvasZoom));
     transform: translate(var(--positionX), var(--positionY));
     border-radius: 20px;
-    box-shadow: 0px 2px var(--test) rgba(0, 0, 0, 0.3);
     transition-timing-function: cubic-bezier(0.4, 2.5, 0.42, 0.5);
     opacity: 1;
   }

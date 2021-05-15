@@ -166,7 +166,7 @@
     {
       stiffness: PAN_STIFFNESS,
       damping: PAN_DAMPING,
-      precision: 0.0000001,
+      precision: 0.0001,
     }
   );
 
@@ -177,7 +177,7 @@
     {
       stiffness: ZOOM_STIFFNESS,
       damping: ZOOM_DAMPING,
-      precision: 0.0000001,
+      precision: 0.0001,
     }
   );
 
@@ -212,7 +212,7 @@
   }
 </script>
 
-<div id="canvas" on:mousedown={canvasMouseDown} on:mousewheel={canvasMouseWheel}>
+<div id="canvas" on:mousedown={canvasMouseDown} on:wheel={canvasMouseWheel}>
   <div id="background" on:mousedown={backgroundMouseDown} />
 
   <BoxSelection bind:this={boxSelection} />
