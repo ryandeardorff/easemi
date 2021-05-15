@@ -60,7 +60,7 @@ export default {
 			dedupe: ['svelte']
 		}),
 		typescript({
-			sourceMap: production,
+			sourceMap: !production,
 			inlineSources: !production,
 			rootDir: './src',
 			sourceMap: !production,
