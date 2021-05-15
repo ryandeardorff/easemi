@@ -27,8 +27,7 @@ jobs:
     - name: Build
       run: npm run build
     
-    - name: Push Changes
-      uses: actions-go/push@v1
+    - name: Commit Changes
+      uses: zwaldowski/git-commit-action@v1
       with:
-        author-name: Git Build Workflow
-        commit-message: Production Files Built
+        commit-message: Svelte Build Commmited
