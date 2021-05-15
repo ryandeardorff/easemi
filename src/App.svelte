@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Canvas from "./core/canvas.svelte";
+  import Canvas from "./core/Canvas.svelte";
 </script>
 
 <main on:contextmenu|preventDefault on:drag|preventDefault on:dragstart|preventDefault on:dragenter|preventDefault>
