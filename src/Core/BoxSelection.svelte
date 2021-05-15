@@ -70,6 +70,13 @@
     compareSelection(additive);
   }
   function endBoxSelection() {
+    for (let item of $canvasItems) {
+      if (item.inSelectionRange) {
+        item.selected = true;
+        item.inSelectionRange = false;
+      }
+    }
+    canvasItems.update((u) => u);
     selecting = false;
     visibility = "hidden";
   }
@@ -94,9 +101,9 @@
         )
       ) {
         //TODO: split element boxSelection into a separate function that could be called by a mouse events.
-        item.selected = true;
-      } else if (!additive) {
-        item.selected = false;
+        item.inSelectionRange = true;
+      } else {
+        item.inSelectionRange = false;
       }
     }
     canvasItems.update((u) => u);

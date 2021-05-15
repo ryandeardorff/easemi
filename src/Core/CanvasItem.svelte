@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { canvasCurrentScale, canvasItems, operations } from "../stores";
+  import { activeInput, canvasCurrentScale, canvasItems, operations } from "../stores";
   import { createEventDispatcher } from "svelte";
   import { compareInput, mouseButtonMap, pushInput } from "../scripts/input-management";
   import { Vector } from "../scripts/helpers";
@@ -26,19 +26,19 @@
   }
 
   let selectPressed = false;
+  let selectAdditivePressed = false;
   let movePressed = false;
   let dragging = false;
   let dragStart = { x: 0, y: 0 };
   function mouseDown(e: MouseEvent) {
     pushInput(mouseButtonMap[e.button]);
-    if (compareInput(operations.ITEM.SELECT) || compareInput(operations.ITEM.SELECT_ADDITIVE)) {
-      selectInputDown();
+    if (compareInput(operations.ITEM.SELECT)) {
+      selectPressed = true;
+    }
+    if (compareInput(operations.ITEM.SELECT_ADDITIVE)) {
+      selectAdditivePressed = true;
     }
     if (compareInput(operations.ITEM.MOVE)) {
-      if (!selected) {
-        clearSelection();
-        canvasItem.selected = true;
-      }
       movePressed = true;
       dragStart = { x: e.clientX, y: e.clientY };
     }
@@ -52,8 +52,13 @@
       }
     }
     if (compareInput(operations.ITEM.MOVE) && movePressed && dragging) {
+      if (!selected) {
+        clearSelection();
+        canvasItem.selected = true;
+      }
       dragItems(e.movementX / devicePixelRatio, e.movementY / devicePixelRatio);
       selectPressed = false;
+      selectAdditivePressed = false;
     }
   }
   function windowMouseUp(e: MouseEvent) {
@@ -61,26 +66,28 @@
       movePressed = false;
       dragging = false;
     }
-    if (!compareInput(operations.ITEM.SELECT_ADDITIVE) && selectPressed) {
-      selectInputUp(true);
-    }
     if (!compareInput(operations.ITEM.SELECT) && selectPressed) {
       selectInputUp(false);
     }
+    if (!compareInput(operations.ITEM.SELECT_ADDITIVE) && selectAdditivePressed) {
+      selectInputUp(true);
+    }
   }
 
-  function selectInputDown() {
-    selectPressed = true;
-  }
   function selectInputUp(additive = false) {
-    if (selectPressed) {
-      if (!additive) {
+    console.log(additive);
+    console.log("selected ", canvasItem.selected);
+    if (selectPressed || selectAdditivePressed) {
+      if (additive) {
+        canvasItem.selected = !canvasItem.selected;
+      } else {
         clearSelection();
+        canvasItem.selected = true;
       }
-      canvasItem.selected = true;
       canvasItems.update((u) => u);
     }
     selectPressed = false;
+    selectAdditivePressed = false;
   }
 
   function dragItems(dx: number, dy: number) {

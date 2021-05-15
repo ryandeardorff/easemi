@@ -12,6 +12,7 @@ class CanvasItem {
   position = { x: 0, y: 0 };
   scale = { x: 10, y: 10 };
   component = CanvasImage;
+  inSelectionRange = false;
   selected = false;
   constructor(id: string, position: { x: number; y: number }, scale: { x: number; y: number }, component: any) {
     this.id = id;
