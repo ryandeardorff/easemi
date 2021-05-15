@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Build Svelte
 
 # Controls when the action will run. 
 on:
@@ -26,11 +26,17 @@ jobs:
       - uses: actions/checkout@v2
 
       # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: NPM or Yarn install with caching
+        uses: bahmutov/npm-install@v1.6.0
+
 
       # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+      - name: Run a yarn or npm command
+        # You may pin to the exact commit or the version.
+        # uses: Adzz/yarn_command_action@56ed36b86d715869a3cf3d2a9b2de2aff7fa945e
+        uses: Adzz/yarn_command_action@v1.0.0
+        with:
+          # Specify whether to use npm or yarn to run the tests. May be npm or yarn only defaults to yarn
+          package-manager: npm
+          # The command you wish to run e.g. test
+          command: run build
