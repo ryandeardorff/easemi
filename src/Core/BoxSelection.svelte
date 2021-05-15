@@ -149,6 +149,6 @@
   #selection-box {
     fill: rgba(0, 183, 255, 0.295);
     stroke-width: 3;
-    stroke: rgb(255, 220, 21);
+    stroke: rgb(21, 189, 255);
   }
 </style>
