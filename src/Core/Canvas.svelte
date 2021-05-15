@@ -39,6 +39,8 @@
 
   const SCROLL_ZOOM_MULTIPLIER = 2;
 
+  let boxSelection: BoxSelection;
+
   /*   Keyboard Input   */
 
   document.addEventListener("keydown", keyDown);
@@ -79,22 +81,20 @@
   function mouseUp(e: MouseEvent) {
     spliceInput(mouseButtonMap[e.button]);
 
-    boxSelectMouseUp(e);
     panInputEnd();
   }
   document.addEventListener("mousemove", mouseMove);
   function mouseMove(e: MouseEvent) {
-    boxSelectMouseMove(e);
     panMouseMove(e);
   }
 
   function backgroundMouseDown(e: MouseEvent) {
     pushInput(mouseButtonMap[e.button]);
     if (compareInput(operations.CANVAS.BOX_SELECT)) {
-      startBoxSelection(e.clientX, e.clientY, false);
+      boxSelection.backgroundStartBoxSelection(e.clientX, e.clientY, false);
     }
     if (compareInput(operations.CANVAS.BOX_SELECT_ADDITIVE)) {
-      startBoxSelection(e.clientX, e.clientY, true);
+      boxSelection.backgroundStartBoxSelection(e.clientX, e.clientY, true);
     }
   }
 
@@ -148,29 +148,6 @@
     }
     if (compareInput(operations.CANVAS.ZOOM_OUT)) {
       zoom(-SCROLL_ZOOM_MULTIPLIER);
-    }
-  }
-
-  function boxSelectMouseMove(e: MouseEvent) {
-    if (selecting) {
-      if (compareInput(operations.CANVAS.BOX_SELECT)) {
-        dragBoxSelection(e.clientX, e.clientY, false);
-      } else if (compareInput(operations.CANVAS.BOX_SELECT_ADDITIVE)) {
-        dragBoxSelection(e.clientX, e.clientY, true);
-      } else {
-        endBoxSelection();
-      }
-    }
-  }
-  function boxSelectMouseUp(e: MouseEvent) {
-    if (
-      selecting &&
-      activeInput.toString() !=
-        mappings
-          .find((element) => element.operation == operations.CANVAS.BOX_SELECT || operations.CANVAS.BOX_SELECT_ADDITIVE)
-          .input.toString()
-    ) {
-      endBoxSelection();
     }
   }
 
@@ -233,76 +210,12 @@
     zoomTarget.s = zoomTarget.s + ds * zoomTarget.s * 0.1;
     zoomSpring.update(($zoomSpring) => zoomTarget);
   }
-
-  /*   Box Selections   */
-  //TODO: Refactor these functions as box selections rather than just "selection"s.
-  let boxSelectionStart = { x: 0, y: 0 };
-  let boxSelectionScale = { x: 1000, y: 1000 };
-  let boxSelectionPosition = { x: 0, y: 0 };
-  let selecting = false;
-  let boxSelectionVisibility = "hidden";
-  function startBoxSelection(x: number, y: number, additive: boolean) {
-    selecting = true;
-    boxSelectionStart = screenToWorld(x, y);
-    boxSelectionScale = { x: 0, y: 0 };
-    boxSelectionPosition = { x: 0, y: 0 };
-    boxSelectionVisibility = "hidden";
-    if (!additive) {
-      clearSelection();
-    }
-  }
-  function dragBoxSelection(cx: number, cy: number, additive: boolean) {
-    let currentToWorld = screenToWorld(cx, cy);
-    let square = squareNormalization(boxSelectionStart, currentToWorld);
-    boxSelectionScale = { x: square.width, y: square.height };
-    boxSelectionPosition = { x: square.x, y: square.y };
-    boxSelectionVisibility = "visible";
-    compareSelection(additive);
-  }
-  function endBoxSelection() {
-    selecting = false;
-    boxSelectionVisibility = "hidden";
-  }
-
-  let boxSelectionScaleScreen = { x: 0, y: 0 };
-  $: boxSelectionPositionScreen = worldToScreen(
-    boxSelectionPosition.x,
-    boxSelectionPosition.y,
-    $canvasCurrentTranslation.x,
-    $canvasCurrentTranslation.y,
-    $canvasCurrentScale
-  );
-  $: boxSelectionScaleScreen = Vector.multiplyBoth(boxSelectionScale, $canvasCurrentScale);
-
-  //Function that compares elements to the boxSelection box.
-  function compareSelection(additive: boolean) {
-    for (let item of $canvasItems) {
-      if (
-        overlappingRect(
-          new DOMRect(boxSelectionPosition.x, boxSelectionPosition.y, boxSelectionScale.x, boxSelectionScale.y),
-          new DOMRect(item.position.x, item.position.y, item.scale.x, item.scale.y)
-        )
-      ) {
-        //TODO: split element boxSelection into a separate function that could be called by a mouse events.
-        item.selected = true;
-      } else if (!additive) {
-        item.selected = false;
-      }
-    }
-    canvasItems.update((u) => u);
-  }
 </script>
 
 <div id="canvas" on:mousedown={canvasMouseDown} on:mousewheel={canvasMouseWheel}>
   <div id="background" on:mousedown={backgroundMouseDown} />
 
-  <BoxSelection
-    translateX={boxSelectionPositionScreen.x}
-    translateY={boxSelectionPositionScreen.y}
-    scaleX={boxSelectionScaleScreen.x}
-    scaleY={boxSelectionScaleScreen.y}
-    visibility={boxSelectionVisibility}
-  />
+  <BoxSelection bind:this={boxSelection} />
 
   <Selection />
 
