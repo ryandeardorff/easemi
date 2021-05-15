@@ -49,15 +49,16 @@ export const operations = {
   },
   SHORTCUT: {
     SAVE: "shortcut.save",
-    TEST: "shortcut.test",
+    ALIGN_TOP: "shortcut.align_top",
   },
 };
 
 export class Mapping {
   operation: string;
   input: string[] = [];
-  onDown: Function;
-  onUp: Function;
+  onDown: Function = () => {};
+  onUp: Function = () => {};
+
   constructor(operation: string, input: string[]) {
     this.operation = operation;
     this.input = input;
@@ -73,10 +74,7 @@ export class Mapping {
 }
 
 export let mappings: Mapping[] = [
-  new Mapping(operations.SHORTCUT.TEST, ["alt", "1"])
-    .setDown(() => console.log("test"))
-    .setUp(() => console.log("test 2")),
-  new Mapping(operations.SHORTCUT.SAVE, ["alt", "2"]).setDown(() => console.log("Test 2")).setUp(() => null),
+  new Mapping(operations.SHORTCUT.ALIGN_TOP, ["control", "arrowup"]), //TODO:create align top function! Agony!
   new Mapping(operations.CANVAS.BOX_SELECT, ["leftMouse"]),
   new Mapping(operations.CANVAS.BOX_SELECT_ADDITIVE, ["shift", "leftMouse"]),
   new Mapping(operations.CANVAS.PAN, ["alt", "rightMouse"]),
