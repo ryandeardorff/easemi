@@ -27,7 +27,9 @@ jobs:
     - name: Build
       run: npm run build
     
-    - name: Commit Changes
-      uses: zwaldowski/git-commit-action@v1
+    - name: Commit & Push changes
+      uses: actions-js/push@master
       with:
-        commit-message: Svelte Build Commmited
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ryandeardorff-build-action
+        message: Automatic Svelte Build for Production
