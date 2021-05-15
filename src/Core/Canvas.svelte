@@ -256,12 +256,4 @@
     user-select: none;
     background-color: white;
   }
-  p {
-    position: relative;
-    align-self: center;
-    left: 50%;
-  }
-  img {
-    position: relative;
-  }
 </style>
