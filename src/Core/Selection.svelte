@@ -1,14 +1,27 @@
-<script lang="ts"></script>
+<script lang="ts">
+  let position = { x: 0, y: 0 };
+  let scale = { x: 100, y: 50 };
+  let visible = true;
+  let visibility = "hidden";
+  $: if (visible) {
+    visibility = "visible";
+  } else {
+    visibility = "hidden";
+  }
+</script>
 
-<div id="selection">
+<div id="selection" style="--visibility:{visibility};">
   <svg>
-    <rect width="100px" height="100px" />
+    <rect x={position.x} y={position.y} width="{scale.x}px" height="{scale.y}px" />
   </svg>
 </div>
 
 <style>
   #selection {
-    z-index: 100;
+    left: 0;
+    top: 0;
+    position: absolute;
     background-color: black;
+    visibility: var(--visibility);
   }
 </style>
