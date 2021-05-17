@@ -7,7 +7,7 @@ export const canvasCurrentScale = writable(1);
 export const canvasCurrentTranslation = writable({ x: 0, y: 0 });
 export const devicePixelRatio = writable(window.devicePixelRatio);
 
-class CanvasItem {
+export class CanvasItem {
   id = ""; //this will be randomly generated on server or client side
   position = { x: 0, y: 0 };
   scale = { x: 10, y: 10 };

@@ -32,8 +32,8 @@ function screenToWorld(
   };
 }
 function worldToScreen(
-  screenX: number,
-  screenY: number,
+  worldX: number,
+  worldY: number,
   customX: number = null,
   customY: number = null,
   customScale: number = null
@@ -51,8 +51,8 @@ function worldToScreen(
     canvas.scale = customScale;
   }
   return {
-    x: screenX * canvas.scale + canvas.offset.x,
-    y: screenY * canvas.scale + canvas.offset.y,
+    x: worldX * canvas.scale + canvas.offset.x,
+    y: worldY * canvas.scale + canvas.offset.y,
   };
 }
 
