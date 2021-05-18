@@ -101,6 +101,7 @@
   function canvasMouseDown(e: MouseEvent) {
     pushInput(mouseButtonMap[e.button]);
     panInputStart(e);
+    console.log(compareInput(operations.CANVAS.PAN), activeInput);
   }
 
   function canvasMouseWheel(e: WheelEvent) {

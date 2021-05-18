@@ -79,6 +79,7 @@ export let mappings: Mapping[] = [
   new Mapping(operations.CANVAS.BOX_SELECT_ADDITIVE, ["shift", "leftMouse"]),
   new Mapping(operations.CANVAS.PAN, ["alt", "rightMouse"]),
   new Mapping(operations.CANVAS.PAN, ["middleMouse"]),
+  new Mapping(operations.CANVAS.PAN, ["spacebar", "leftMouse"]),
   new Mapping(operations.CANVAS.ZOOM_IN, ["scrollUp"]),
   new Mapping(operations.CANVAS.ZOOM_OUT, ["scrollDown"]),
   new Mapping(operations.ITEM.MOVE, ["leftMouse"]),

@@ -22,14 +22,15 @@ export function compareInput(operation: string, input: string[] = activeInput): 
     if (input.toString() == mapping.input.toString()) {
       return true;
     }
-    for (let mapping of mappings.filter((element) => element.operation != operation)) {
+    //This code causes too many bugs.
+    /*for (let mapping of mappings.filter((element) => element.operation != operation)) {
       if (input.toString().includes(mapping.input.toString())) {
         return false;
       }
     }
     if (input.toString().includes(mapping.input.toString())) {
       return true;
-    }
+    }*/
   }
 }
 export function preventDefault(input: string[], e: Event) {
@@ -76,5 +77,8 @@ export function shortcutUp(e: Event) {
 export function processKey(key: string) {
   let processedKey = key;
   processedKey = processedKey.toLowerCase();
+  if (processedKey == " ") {
+    processedKey = "spacebar";
+  }
   return processedKey;
 }
