@@ -1,9 +1,11 @@
 <script lang="ts">
   import { worldToScreen, screenToWorld, Vector } from "../scripts/helpers";
+  import { compareInput, mouseButtonMap, pushInput } from "../scripts/input-management";
 
-  import { canvasItems, CanvasItem } from "../stores";
+  import { canvasItems, CanvasItem, canvasCurrentScale, canvasCurrentTranslation, operations } from "../stores";
   let position = { x: 0, y: 0 };
   let scale = { x: 100, y: 50 };
+  let initialScale = { x: 0, y: 0 };
   let visible = true;
   let visibility = "hidden";
   let bounds = { left: 0, right: 0, top: 0, bottom: 0 };
@@ -31,24 +33,132 @@
   }
 
   $: if (visible) {
-    position = worldToScreen(bounds.left, bounds.top);
+    position = worldToScreen(
+      bounds.left,
+      bounds.top,
+      $canvasCurrentTranslation.x,
+      $canvasCurrentTranslation.y,
+      $canvasCurrentScale
+    );
   }
   $: if (visible) {
-    scale = worldToScreen(Vector.subtractEach({ x: bounds.right, y: bounds.bottom }, position));
+    let bottomRight = worldToScreen(bounds.right, bounds.bottom);
+    let topLeft = worldToScreen(bounds.left, bounds.top);
+    let difference = { x: bottomRight.x - topLeft.x, y: bottomRight.y - topLeft.y };
+
+    scale = Vector.multiplyBoth(difference, $canvasCurrentScale);
+  }
+
+  const positionMultiplier = {
+    TOP_LEFT: { x: 1, y: 1 },
+    TOP_RIGHT: { x: 0, y: 1 },
+    BOTTOM_LEFT: { x: 1, y: 0 },
+    BOTTOM_RIGHT: { x: 0, y: 0 },
+  };
+  const scaleMultiplier = {
+    TOP_LEFT: { x: -1, y: -1 },
+    TOP_RIGHT: { x: 1, y: -1 },
+    BOTTOM_LEFT: { x: -1, y: 1 },
+    BOTTOM_RIGHT: { x: 1, y: 1 },
+  };
+
+  const scalePoints = {
+    TOP_LEFT: { positionMultiplier: positionMultiplier.TOP_LEFT, scaleMultiplier: scaleMultiplier.TOP_LEFT },
+    TOP_RIGHT: { positionMultiplier: positionMultiplier.TOP_RIGHT, scaleMultiplier: scaleMultiplier.TOP_RIGHT },
+    BOTTOM_LEFT: { positionMultiplier: positionMultiplier.BOTTOM_LEFT, scaleMultiplier: scaleMultiplier.BOTTOM_LEFT },
+    BOTTOM_RIGHT: {
+      positionMultiplier: positionMultiplier.BOTTOM_RIGHT,
+      scaleMultiplier: scaleMultiplier.BOTTOM_RIGHT,
+    },
+  };
+
+  let scaling = false;
+  let scalePoint = null;
+
+  function windowMouseMove(e: MouseEvent) {
+    if (compareInput(operations.ITEM.MOVE) && scaling && scalePoint != null) {
+      let worldMovement = Vector.multiplyBoth({ x: e.movementX, y: e.movementY }, 1 / $canvasCurrentScale);
+      let positionChange = Vector.multiplyEach(worldMovement, scalePoint.positionMultiplier);
+      let scaleChange = Vector.multiplyEach(worldMovement, scalePoint.scaleMultiplier);
+      for (let item of selectedItems) {
+        let selectionPositionProportion = Vector.divideEach(item.position, initialScale);
+        let selectionScaleProportion = Vector.divideEach(item.scale, initialScale);
+        console.log(selectionScaleProportion);
+        let proportionalPosition = positionChange;
+        let proportionalScale = Vector.multiplyEach(scaleChange, selectionScaleProportion);
+        item.position = Vector.addEach(item.position, proportionalPosition);
+        item.scale = Vector.addEach(item.scale, proportionalScale);
+      }
+      canvasItems.update((u) => u);
+    }
+  }
+
+  function windowMouseUp(e: MouseEvent) {
+    if (!compareInput(operations.ITEM.MOVE)) {
+      scaling = false;
+      scalePoint = null;
+    }
+  }
+
+  function scaleMouseDown(e: MouseEvent, point: any = scalePoints.TOP_LEFT) {
+    pushInput(mouseButtonMap[e.button]);
+    if (compareInput(operations.ITEM.MOVE)) {
+      scaling = true;
+      scalePoint = point;
+      initialScale = scale;
+    }
   }
 </script>
 
+<svelte:window on:mousemove={windowMouseMove} on:mouseup={windowMouseUp} />
 <div id="selection" style="--visibility:{visibility};">
-  <svg width="100000" height="100000">
-    <rect x={position.x} y={position.y} width="{scale.x}px" height="{scale.y}px" />
+  <svg>
+    <line x1={position.x} y1={position.y - 1} x2={position.x + scale.x} y2={position.y - 1} />
+    <rect x={position.x} y={position.y} width="{scale.x}px" height="{scale.y}px" rx={40 * $canvasCurrentScale} />
+    <circle on:mousedown={(e) => scaleMouseDown(e, scalePoints.TOP_LEFT)} cx={position.x} cy={position.y} r={8} />
+    <circle
+      on:mousedown={(e) => scaleMouseDown(e, scalePoints.TOP_RIGHT)}
+      cx={position.x + scale.x}
+      cy={position.y}
+      r={8}
+    />
+    <circle
+      on:mousedown={(e) => scaleMouseDown(e, scalePoints.BOTTOM_RIGHT)}
+      cx={position.x + scale.x}
+      cy={position.y + scale.y}
+      r={8}
+    />
+    <circle
+      on:mousedown={(e) => scaleMouseDown(e, scalePoints.BOTTOM_LEFT)}
+      cx={position.x}
+      cy={position.y + scale.y}
+      r={8}
+    />
   </svg>
 </div>
 
 <style>
   #selection {
+    z-index: 10;
     left: 0;
     top: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
     position: absolute;
     visibility: var(--visibility);
+  }
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+  rect {
+    fill: none;
+    stroke: blue;
+    stroke-width: 3px;
+  }
+  circle {
+    fill: blue;
+    pointer-events: all;
   }
 </style>

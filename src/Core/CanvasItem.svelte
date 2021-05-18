@@ -131,7 +131,7 @@
   .selected {
     --test: calc(8px / var(--canvasZoom));
     transform: translate(var(--positionX), var(--positionY));
-    border-radius: 20px;
+    border-radius: 40px;
     transition-timing-function: cubic-bezier(0.4, 2.5, 0.42, 0.5);
     opacity: 1;
   }

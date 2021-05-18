@@ -57,6 +57,8 @@ function worldToScreen(
 }
 
 class Vector {
+  x: 0;
+  y: 0;
   static addEach(vector1: { x: number; y: number }, vector2: { x: number; y: number }): { x: number; y: number } {
     if (vector1 == null || vector2 == null) return;
     return { x: vector1.x + vector2.x, y: vector1.y + vector2.y };
@@ -75,6 +77,10 @@ class Vector {
   ): { x: number; y: number } {
     if (vector == null || multiplier == null) return;
     return { x: vector.x * multiplier.x, y: vector.y * multiplier.y };
+  }
+  static divideEach(vector: { x: number; y: number }, divisor: { x: number; y: number }): { x: number; y: number } {
+    if (vector == null || divisor == null) return;
+    return { x: vector.x / divisor.x, y: vector.y * divisor.y };
   }
 
   static getLength(vector: { x: number; y: number }): number {
