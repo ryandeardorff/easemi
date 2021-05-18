@@ -5,7 +5,7 @@
   import { canvasItems, CanvasItem, canvasCurrentScale, canvasCurrentTranslation, operations } from "../stores";
   let position = { x: 0, y: 0 };
   let scale = { x: 100, y: 50 };
-  let initialScale = { x: 0, y: 0 };
+  let initialScale = { x: 100, y: 100 };
   let visible = true;
   let visibility = "hidden";
   let bounds = { left: 0, right: 0, top: 0, bottom: 0 };
@@ -81,9 +81,10 @@
       let positionChange = Vector.multiplyEach(worldMovement, scalePoint.positionMultiplier);
       let scaleChange = Vector.multiplyEach(worldMovement, scalePoint.scaleMultiplier);
       for (let item of selectedItems) {
-        let selectionPositionProportion = Vector.divideEach(item.position, initialScale);
-        let selectionScaleProportion = Vector.divideEach(item.scale, initialScale);
-        console.log(selectionScaleProportion);
+        let worldSelectScale = screenToWorld(scale.x, scale.y);
+        let selectionPositionProportion = Vector.divideEach(item.position, worldSelectScale);
+        let selectionScaleProportion = Vector.divideEach(item.scale, worldSelectScale);
+        console.log(selectionScaleProportion, item.scale, worldSelectScale);
         let proportionalPosition = positionChange;
         let proportionalScale = Vector.multiplyEach(scaleChange, selectionScaleProportion);
         item.position = Vector.addEach(item.position, proportionalPosition);
@@ -103,9 +104,9 @@
   function scaleMouseDown(e: MouseEvent, point: any = scalePoints.TOP_LEFT) {
     pushInput(mouseButtonMap[e.button]);
     if (compareInput(operations.ITEM.MOVE)) {
+      initialScale = screenToWorld(scale.x, scale.y);
       scaling = true;
       scalePoint = point;
-      initialScale = scale;
     }
   }
 </script>
